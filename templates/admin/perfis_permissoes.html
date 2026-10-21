@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block titulo %}Permissões de {{ perfil.nome }} · OficinaApp{% endblock %}
+{% block topo %}Permissões · {{ perfil.nome }}{% endblock %}
+
+{% block topo_acoes %}
+<a class="btn btn-fantasma btn-sm" href="{{ url_for('admin.perfis') }}">
+  <i class="ph ph-arrow-left"></i> Perfis
+</a>
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="submit" form="formPermissoes">
+  <i class="ph ph-floppy-disk"></i> Salvar
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo compacto" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="avatar" aria-hidden="true">{{ perfil.nome[:1]|upper }}</div>
+      <div style="flex:1 1 320px;min-width:0">
+        <div style="font-family:var(--font-titulo);font-weight:700">{{ perfil.nome }}</div>
+        <div style="font-size:var(--fs-xs);color:var(--texto-secundario)">{{ perfil.descricao or 'Sem descrição' }}</div>
+      </div>
+      {% if not pode_editar %}
+      <span class="badge badge-ambar"><i class="ph ph-lock"></i> Somente leitura</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <form id="formPermissoes" method="post" action="{{ url_for('admin.perfis_permissoes', id_perfil=perfil.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="card">
+      <div class="card-cab">
+        <span class="card-titulo">Matriz VER / EDITAR</span>
+        <span class="badge badge-verde">{{ liberados }}/{{ total_modulos }} com VER</span>
+      </div>
+
+      <div class="tabela-wrap" style="border:0;border-radius:0">
+        <table class="tabela matriz">
+          <thead>
+            <tr>
+              <th>Módulo</th>
+              <th style="width:130px;text-align:center">Ver</th>
+              <th style="width:130px;text-align:center">Editar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for grupo in grupos %}
+            <tr class="matriz-grupo">
+              <td>
+                <i class="ph ph-folder-open"></i> {{ grupo.nome }}
+                <input type="hidden" name="grupo_{{ loop.index0 }}" value="{{ grupo.nome }}">
+                <span class="auto-dica" title="Marque pra que todo MÓDULO NOVO deste grupo já nasça liberado neste perfil">módulo novo entra:</span>
+              </td>
+              <td style="text-align:center">
+                <span class="cv-sw cv-sw-sm" title="Auto-liberar VER em módulos novos deste grupo">
+                  <input type="checkbox" id="av_{{ loop.index0 }}" name="autover_{{ loop.index0 }}"
+                         {{ 'checked' if grupo.auto_ver }} {{ 'disabled' if not pode_editar }}
+                         aria-label="Auto-liberar ver no grupo {{ grupo.nome }}">
+                  <label for="av_{{ loop.index0 }}"></label>
+                </span>
+              </td>
+              <td style="text-align:center">
+                <span class="cv-sw cv-sw-sm" title="Auto-liberar EDITAR em módulos novos deste grupo">
+                  <input type="checkbox" class="auto-editar" id="ae_{{ loop.index0 }}" name="autoeditar_{{ loop.index0 }}"
+                         data-ver="av_{{ loop.index0 }}"
+                         {{ 'checked' if grupo.auto_editar }} {{ 'disabled' if not pode_editar }}
+                         aria-label="Auto-liberar editar no grupo {{ grupo.nome }}">
+                  <label for="ae_{{ loop.index0 }}"></label>
+                </span>
+              </td>
+            </tr>
+            {% for m in grupo.modulos %}
+            <tr>
+              <td>
+                <i class="ph {{ m.icone }}" style="opacity:.8"></i>
+                {{ m.nome }}
+                {% if m.chave == 'perfis' and perfil.id == 1 %}
+                <span class="badge badge-accent" title="Sem esta permissão o administrador perde a chave da porta">obrigatória</span>
+                {% endif %}
+                {% if m.em_breve %}<span class="badge badge-ambar">em breve</span>{% endif %}
+              </td>
+              <td style="text-align:center">
+                <span class="cv-sw">
+                  <input type="checkbox" id="ver_{{ m.id }}" name="ver_{{ m.id }}"
+                         {{ 'checked' if m.ver }}
+                         {{ 'disabled' if (not pode_editar) or m.protegido }}
+                         aria-label="Ver {{ m.nome }}">
+                  <label for="ver_{{ m.id }}"></label>
+                </span>
+              </td>
+              <td style="text-align:center">
+                <span class="cv-sw">
+                  <input type="checkbox" class="mx-editar" id="edit_{{ m.id }}" name="editar_{{ m.id }}"
+                         data-ver="ver_{{ m.id }}"
+                         {{ 'checked' if m.editar }}
+                         {{ 'disabled' if (not pode_editar) or m.protegido }}
+                         aria-label="Editar {{ m.nome }}">
+                  <label for="edit_{{ m.id }}"></label>
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card-rodape" style="font-size:var(--fs-xs);color:var(--texto-fraco)">
+        Marcar <b>Editar</b> já marca <b>Ver</b> (o servidor garante, mesmo se o checkbox vier torto).
+        Os toggles menores na linha do grupo são a <b>auto-liberação</b>: módulo novo que entrar nesse grupo
+        já nasce com essa permissão neste perfil, sem você voltar aqui. O que já existe hoje não muda.
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  // Editar implica Ver (e desmarcar Ver derruba Editar)
+  document.querySelectorAll(".mx-editar").forEach(function (ed) {
+    ed.addEventListener("change", function () {
+      var ver = document.getElementById(ed.dataset.ver);
+      if (ed.checked && ver) ver.checked = true;
+    });
+  });
+  document.querySelectorAll('input[id^="ver_"]').forEach(function (ver) {
+    ver.addEventListener("change", function () {
+      if (ver.checked) return;
+      var ed = document.querySelector('.mx-editar[data-ver="' + ver.id + '"]');
+      if (ed) ed.checked = false;
+    });
+  });
+  // Auto-liberar EDITAR implica auto-liberar VER
+  document.querySelectorAll(".auto-editar").forEach(function (ae) {
+    ae.addEventListener("change", function () {
+      var av = document.getElementById(ae.dataset.ver);
+      if (ae.checked && av) av.checked = true;
+    });
+  });
+})();
+</script>
+{% endblock %}

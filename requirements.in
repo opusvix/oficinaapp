@@ -1,0 +1,23 @@
+# Dependências DIRETAS do OficinaApp (o que o código importa).
+# Não instale daqui: o requirements.txt é o lockfile gerado a partir deste
+# arquivo, com todas as dependências indiretas pinadas.
+#
+# Mudou algo aqui? Gere o lockfile de novo e audite (Padrao_Dependencias_Lockfile):
+#   pip-compile requirements.in -o requirements.txt
+#   pip-audit -r requirements.txt
+#
+# Versões fixadas no que está rodando hoje: subir versão é decisão, não acaso.
+flask==3.1.3  # 3.1.0 tinha PYSEC-2026-1377 e PYSEC-2026-2151 (pip-audit 19/10/2026)
+flask-login==0.6.3
+flask-bcrypt==1.0.1
+python-dotenv==1.2.2  # 1.0.1 tinha PYSEC-2026-2270
+pydantic==2.14.1
+# importados direto no código (core/auth.py, core/security.py, core/upload.py)
+bcrypt==5.0.0
+werkzeug==3.1.9
+# fuso horário: o Windows não traz a base de fusos do Python (core/tempo.py)
+tzdata==2026.5
+# servidor WSGI de produção (Dockerfile); no Windows o iniciar.bat usa o servidor do Flask
+gunicorn==23.0.0
+# importação de peças por planilha (modules/estoque.py: modelo + leitura)
+openpyxl==3.1.5

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block titulo %}Financeiro · OficinaApp{% endblock %}
+{% block topo %}Financeiro{% endblock %}
+
+{% block topo_acoes %}
+<a class="btn btn-secundario btn-sm" href="{{ url_for('financeiro.caixa') }}">
+  <i class="ph ph-cash-register"></i> {{ "Caixa aberto" if caixa else "Abrir caixa" }}
+</a>
+{% endblock %}
+
+{% block conteudo %}
+{% from "_periodo.html" import periodo %}
+<div class="container">
+
+  {# Dashboard é o ÚNICO lugar com KPI (Listagens_sem_KPI). Período = data do pagamento. #}
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <form method="get" class="fu-bar">
+        {{ periodo(rotulo="Pagamento", opcoes=periodos, sel=periodo_sel, de=periodo_de, ate=periodo_ate) }}
+        <div class="acoes-filtros">
+          <a href="{{ url_for('financeiro.dashboard', periodo='todos') }}" class="btn btn-secundario">Limpar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="mg-kpis">
+    <div class="mg-kpi ac-fat">
+      <div class="ico"><i class="ph ph-currency-circle-dollar"></i></div>
+      <div class="corpo">
+        <div class="lbl">Recebido no período</div>
+        <div class="val">{{ k.recebido | moeda }}</div>
+        <div class="disc">pago no período: {{ k.pago | moeda }}</div>
+      </div>
+    </div>
+    <div class="mg-kpi ac-fat">
+      <div class="ico"><i class="ph ph-calendar-check"></i></div>
+      <div class="corpo">
+        <div class="lbl">Recebido hoje</div>
+        <div class="val">{{ k.recebido_hoje | moeda }}</div>
+        <div class="disc"></div>
+      </div>
+    </div>
+    <div class="mg-kpi ac-info">
+      <div class="ico"><i class="ph ph-receipt"></i></div>
+      <div class="corpo">
+        <div class="lbl">Ticket médio por OS</div>
+        <div class="val">{{ k.ticket | moeda }}</div>
+        <div class="disc">{{ k.qtd_os }} OS recebida{{ 's' if k.qtd_os != 1 else '' }} no período</div>
+      </div>
+    </div>
+    <a class="mg-kpi ac-info" href="{{ url_for('financeiro.receber', status='aberto', periodo='todos') }}">
+      <div class="ico"><i class="ph ph-hourglass-medium"></i></div>
+      <div class="corpo">
+        <div class="lbl">A receber (a vencer)</div>
+        <div class="val">{{ k.a_receber | moeda }}</div>
+        <div class="disc" title="Em aberto, vence de hoje em diante">vence de hoje em diante</div>
+      </div>
+    </a>
+    <a class="mg-kpi {{ 'neg' if k.qtd_vencido else 'ac-fin' }}"
+       href="{{ url_for('financeiro.receber', status='vencido', periodo='todos') }}">
+      <div class="ico"><i class="ph ph-warning-circle"></i></div>
+      <div class="corpo">
+        <div class="lbl">Inadimplência</div>
+        <div class="val">{{ k.vencido | moeda }}</div>
+        <div class="disc">{{ k.qtd_vencido }} título{{ 's' if k.qtd_vencido != 1 else '' }} vencido{{ 's' if k.qtd_vencido != 1 else '' }}</div>
+      </div>
+    </a>
+    <div class="mg-kpi {{ 'pos' if k.saldo >= 0 else 'neg' }}">
+      <div class="ico"><i class="ph ph-wallet"></i></div>
+      <div class="corpo">
+        <div class="lbl">Saldo do período</div>
+        <div class="val">{{ k.saldo | moeda }}</div>
+        <div class="disc">recebido menos pago</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-cab"><span class="card-titulo">Vencem nos próximos 7 dias</span></div>
+    <div class="card-corpo">
+      {% if proximos %}
+      <table class="tabela">
+        <thead>
+          <tr><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th>Cliente / Fornecedor</th><th class="col-num">Valor</th></tr>
+        </thead>
+        <tbody>
+          {% for t in proximos %}
+          <tr>
+            <td>{{ t.data_vencimento | dia }}</td>
+            <td><span class="badge {{ 'badge-verde' if t.tipo == 'RECEBER' else 'badge-ambar' }}">{{ 'A receber' if t.tipo == 'RECEBER' else 'A pagar' }}</span></td>
+            <td>{{ t.descricao }}</td>
+            <td>{{ t.cliente or t.fornecedor or '—' }}</td>
+            <td class="col-num num-dinheiro">{{ t.valor | moeda }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="vazio-tabela" style="padding:24px">
+        <i class="ph ph-calendar-blank"></i>
+        <span class="titulo">Nada vence nos próximos 7 dias</span>
+        <span class="desc">Contas a receber e a pagar em aberto aparecem aqui uma semana antes do vencimento.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

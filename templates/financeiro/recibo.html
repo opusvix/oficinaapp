@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recibo #{{ t.id }} · {{ empresa }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/phosphor/style.css') }}">
+  {# Folha própria (mesmo molde do comprovante da OS): papel, claro, sem sidebar #}
+  <style>
+    body { margin: 0; background: var(--fundo); color: var(--texto); font-family: var(--font-corpo, Inter, system-ui, sans-serif); font-size: 14px; }
+    .acoes { max-width: 680px; margin: 16px auto 0; display: flex; justify-content: flex-end; padding: 0 16px; }
+    .acoes button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--branco); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+    .folha { max-width: 680px; margin: 16px auto 24px; background: var(--superficie); padding: 32px; border-radius: 12px; border: 1px solid var(--borda); }
+    .cab { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 18px; }
+    .cab h1 { font-family: var(--font-titulo, Sora, sans-serif); font-size: 22px; margin: 0; }
+    .valor { font-family: var(--font-titulo, Sora, sans-serif); font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .texto { line-height: 1.7; margin: 18px 0; }
+    .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; }
+    .rot { display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--texto-fraco); }
+    .assinatura { margin-top: 56px; width: 60%; border-top: 1px solid var(--texto); padding-top: 6px; font-size: 12px; color: var(--texto-fraco); }
+    .rodape { margin-top: 24px; font-size: 11px; color: var(--texto-fraco); }
+    @media print { body { background: var(--superficie); } .acoes { display: none; } .folha { margin: 0; border: 0; padding: 0; max-width: none; } @page { margin: 16mm; } }
+  </style>
+</head>
+<body>
+  <div class="acoes"><button type="button" id="btnImprimir"><i class="ph ph-printer"></i> Imprimir / Salvar PDF</button></div>
+  <div class="folha">
+    <div class="cab">
+      <div><div style="font-weight:700">{{ empresa }}</div><h1>Recibo nº {{ t.id }}</h1></div>
+      <div class="valor">{{ t.valor | moeda }}</div>
+    </div>
+    <p class="texto">
+      Recebemos de <strong>{{ t.cliente or "cliente não identificado" }}</strong>{% if t.cpf_cnpj %} (CPF/CNPJ {{ t.cpf_cnpj | documento }}){% endif %}
+      a importância de <strong>{{ t.valor | moeda }}</strong>, referente a <strong>{{ t.descricao }}</strong>{% if t.total_parcelas and t.total_parcelas > 1 %}, parcela {{ t.parcela }} de {{ t.total_parcelas }}{% endif %}.
+    </p>
+    <div class="grade">
+      <div><span class="rot">Forma de pagamento</span>{{ rotulo_forma.get(t.forma_pagamento, t.forma_pagamento) }}</div>
+      <div><span class="rot">Data do pagamento</span>{{ t.data_pagamento | dia }}</div>
+      {% if t.id_os %}<div><span class="rot">Ordem de serviço</span>OS #{{ t.id_os }}</div>{% endif %}
+    </div>
+    <div class="assinatura">{{ empresa }}</div>
+    <div class="rodape">Emitido em {{ emitido }}</div>
+  </div>
+<script nonce="{{ csp_nonce() }}">
+document.getElementById("btnImprimir").addEventListener("click", function () { window.print(); });
+</script>
+</body>
+</html>

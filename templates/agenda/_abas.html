@@ -1,0 +1,12 @@
+{# Abas da Agenda (Padrao_Tabs): botão + ícone, sublinhado 2px na ativa, régua embaixo.
+   Cada aba é uma tela própria (filtros diferentes), então o botão navega (data-vai). #}
+{% macro abas(ativa) %}
+<div class="ag-tabs">
+  <button type="button" class="ag-tab {{ 'ativo' if ativa == 'semana' else '' }}" data-vai="{{ url_for('agenda.semana') }}">
+    <i class="ph ph-calendar"></i> Agenda da semana
+  </button>
+  <button type="button" class="ag-tab {{ 'ativo' if ativa == 'rotas' else '' }}" data-vai="{{ url_for('agenda.rotas') }}">
+    <i class="ph ph-map-trifold"></i> Rotas do dia
+  </button>
+</div>
+{% endmacro %}

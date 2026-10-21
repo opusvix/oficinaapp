@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% block titulo %}Clientes · OficinaApp{% endblock %}
+{% block topo %}Clientes{% endblock %}
+
+{% block topo_acoes %}
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-clique="novoCliente">
+  <i class="ph ph-plus"></i> Novo cliente
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+  <div class="card">
+    {% if clientes %}
+    <div class="tabela-wrap" data-tabela data-pref-key="clientes" data-titulo="Clientes">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="razao">Razão social</th>
+              <th data-col-key="fantasia">Nome fantasia</th>
+              <th data-col-key="doc">CPF / CNPJ</th>
+              <th data-col-key="cidade">Cidade / UF</th>
+              <th data-col-key="telefone">Telefone</th>
+              <th data-col-key="eqps" class="col-num">Equipamentos</th>
+              <th class="celula-acoes"></th>{# slot fixo: sem data-col-key #}
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in clientes %}
+            <tr data-razao="{{ c.razao_social }}"
+                data-fantasia="{{ c.nome_fantasia or '' }}"
+                data-doc="{{ c.doc_fmt }}"
+                data-cidade="{{ c.cidade_uf }}"
+                data-telefone="{{ c.tel_fmt }}"
+                data-eqps="{{ c.qtd_equipamentos }}"
+                data-busca="{{ c.razao_social }} {{ c.nome_fantasia or '' }} {{ c.doc_fmt }} {{ c.cidade_uf }} {{ c.tel_fmt }}">
+              <td>
+                {% if c.foto %}<img class="foto-linha" src="{{ url_for('static', filename=c.foto) }}" alt="">{% endif %}
+                <a class="linha-forca" href="{{ url_for('clientes.detalhe', id_cliente=c.id) }}">{{ c.razao_social }}</a>
+              </td>
+              <td>{{ c.nome_fantasia or '—' }}</td>
+              <td class="col-num">{{ c.doc_fmt }}</td>
+              <td>{{ c.cidade_uf }}</td>
+              <td class="col-num">{{ c.tel_fmt }}</td>
+              <td class="col-num">
+                <span class="badge {{ 'badge-azul' if c.qtd_equipamentos else 'badge-cinza' }}">{{ c.qtd_equipamentos }}</span>
+              </td>
+              <td class="celula-acoes">
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone" title="Editar cliente"
+                        data-clique="editarCliente" data-arg="{{ c.id }}">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                {% endif %}
+                <a class="btn btn-icone" title="Ver cliente e equipamentos"
+                   href="{{ url_for('clientes.detalhe', id_cliente=c.id) }}">
+                  <i class="ph ph-eye"></i>
+                </a>
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone"
+                        title="Excluir cliente (soft delete: histórico fica)"
+                        data-url="{{ url_for('clientes.excluir', id_cliente=c.id) }}"
+                        data-clique="excluirCliente" data-com-el
+                        data-nome="{{ c.razao_social }}">
+                  <i class="ph ph-trash"></i>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="Exclusão disponível apenas para o perfil Administrador">
+                  <i class="ph ph-trash"></i>
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    {# Padrao_Estado_Vazio: a tabela inteira some, vira bloco centralizado #}
+    <div class="vazio-tabela">
+      <i class="ph ph-storefront"></i>
+      <span class="titulo">Nenhum cliente cadastrado</span>
+      <span class="desc">Cadastre o primeiro cliente para abrir ordens de serviço
+        e acompanhar o histórico de equipamentos dele.</span>
+      {% if pode_editar %}
+      <button class="btn btn-primary" type="button" data-clique="novoCliente">
+        <i class="ph ph-plus"></i> Novo cliente
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <p class="legenda-tabela">
+    <i class="ph ph-info"></i>
+    Exclusão é soft delete: o cliente sai da lista, mas equipamentos e ordens de
+    serviço antigas continuam no histórico.
+  </p>
+</div>
+
+{# ── Modal cadastro/edição (Padrao_Modal, .modal-md = 55vw) ─────────────── #}
+{% if pode_editar %}
+<div class="modal-overlay" id="modalCliente">
+  <div class="modal md">
+    <form method="post" action="{{ url_for('clientes.salvar') }}"
+          enctype="multipart/form-data" id="formCliente">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="id" value="{{ valores.get('id', '') }}">
+
+      <div class="modal-cab">
+        <span class="modal-titulo" id="modalClienteTitulo">Novo cliente</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalCliente"
+                aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+
+      <div class="modal-corpo">
+        <div class="form-grid">
+          <div class="campo full {{ 'erro' if erros.get('razao_social') }}">
+            <label for="razao_social">Razão social / nome <span class="obrig">*</span></label>
+            <input type="text" id="razao_social" name="razao_social" maxlength="200"
+                   required value="{{ valores.get('razao_social', '') }}"
+                   placeholder="ex: Padaria São Jorge Ltda">
+            {% if erros.get('razao_social') %}<div class="erro-campo">{{ erros.razao_social }}</div>{% endif %}
+          </div>
+
+          <div class="campo">
+            <label for="nome_fantasia">Nome fantasia</label>
+            <input type="text" id="nome_fantasia" name="nome_fantasia" maxlength="200"
+                   value="{{ valores.get('nome_fantasia', '') }}" placeholder="ex: Padaria São Jorge">
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('cpf_cnpj') }}">
+            <label for="cpf_cnpj">CPF / CNPJ</label>
+            <input type="text" id="cpf_cnpj" name="cpf_cnpj" maxlength="18"
+                   value="{{ valores.get('cpf_cnpj', '') }}" placeholder="000.000.000-00"
+                   data-digita="mascaraDoc">
+            {% if erros.get('cpf_cnpj') %}<div class="erro-campo">{{ erros.cpf_cnpj }}</div>{% endif %}
+          </div>
+
+          <div class="campo">
+            <label for="ie_rg">IE / RG</label>
+            <input type="text" id="ie_rg" name="ie_rg" maxlength="20"
+                   value="{{ valores.get('ie_rg', '') }}">
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('email') }}">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email" maxlength="150"
+                   value="{{ valores.get('email', '') }}" placeholder="nome@dominio.com.br">
+            {% if erros.get('email') %}<div class="erro-campo">{{ erros.email }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('telefone1') }}">
+            <label for="telefone1">Telefone 1</label>
+            <input type="tel" id="telefone1" name="telefone1" maxlength="20"
+                   value="{{ valores.get('telefone1', '') }}" placeholder="(11) 99999-0000"
+                   data-mascara="telefone">
+            {% if erros.get('telefone1') %}<div class="erro-campo">{{ erros.telefone1 }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('telefone2') }}">
+            <label for="telefone2">Telefone 2</label>
+            <input type="tel" id="telefone2" name="telefone2" maxlength="20"
+                   value="{{ valores.get('telefone2', '') }}" placeholder="(11) 3333-4444"
+                   data-mascara="telefone">
+            {% if erros.get('telefone2') %}<div class="erro-campo">{{ erros.telefone2 }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('cep') }}">
+            <label for="cep">CEP</label>
+            <input type="text" id="cep" name="cep" maxlength="9"
+                   value="{{ valores.get('cep', '') }}" placeholder="01310-100"
+                   data-digita="mascaraCep">
+            {% if erros.get('cep') %}<div class="erro-campo">{{ erros.cep }}</div>{% endif %}
+          </div>
+
+          <div class="campo full">
+            <label for="logradouro">Logradouro</label>
+            <input type="text" id="logradouro" name="logradouro" maxlength="200"
+                   value="{{ valores.get('logradouro', '') }}" placeholder="ex: Av. Brasil, 1500">
+          </div>
+
+          <div class="campo">
+            <label for="numero">Número</label>
+            <input type="text" id="numero" name="numero" maxlength="20"
+                   value="{{ valores.get('numero', '') }}">
+          </div>
+
+          <div class="campo">
+            <label for="complemento">Complemento</label>
+            <input type="text" id="complemento" name="complemento" maxlength="100"
+                   value="{{ valores.get('complemento', '') }}" placeholder="ex: Galpão 2">
+          </div>
+
+          <div class="campo">
+            <label for="bairro">Bairro</label>
+            <input type="text" id="bairro" name="bairro" maxlength="100"
+                   value="{{ valores.get('bairro', '') }}">
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('cidade') }}">
+            <label for="cidade">Cidade</label>
+            <div class="selectbusca sb-in-dialog" data-src="{{ url_for('clientes.api_cidades') }}">
+              <input class="sb-input" type="text" id="cidade" name="cidade" maxlength="100"
+                     autocomplete="off" placeholder="Digite para buscar"
+                     value="{{ valores.get('cidade', '') }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('cidade') %}<div class="erro-campo">{{ erros.cidade }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('uf') }}">
+            <label for="uf">UF</label>
+            {# SelectBusca, nunca <select> nativo (Sem_Select_Nativo); dá pra digitar "SP" #}
+            <div class="selectbusca sb-in-dialog" id="sbUf" data-opcoes='{{ ([{"valor": "", "rotulo": "—"}] + uf_lista) | tojson }}'>
+              <input type="hidden" name="uf" value="{{ valores.get('uf', '') }}">
+              <input class="sb-input" type="text" id="uf" autocomplete="off" maxlength="2" value="{{ valores.get('uf', '') }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('uf') %}<div class="erro-campo">{{ erros.uf }}</div>{% endif %}
+          </div>
+
+          <div class="campo full">
+            <label for="observacoes">Observações</label>
+            <textarea id="observacoes" name="observacoes"
+                      placeholder="ex: Prefere contato por WhatsApp.">{{ valores.get('observacoes', '') }}</textarea>
+          </div>
+
+          <div class="campo full">
+            <label for="fotoInp">Foto do cliente (opcional)</label>
+            <label class="im-drop" for="fotoInp" id="fotoDrop">
+              <i class="ph ph-file-arrow-up" id="fotoIcone"></i>
+              <div id="fotoTxt">Clique ou arraste a foto aqui (JPG, PNG ou WEBP, até 5 MB)</div>
+              <small class="im-arq" id="fotoArq"></small>
+            </label>
+            <input type="file" id="fotoInp" name="foto" accept="image/*" class="im-inp">
+            {% if erros.get('foto') %}<div class="erro-campo">{{ erros.foto }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalCliente">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Popup de confirmação da exclusão (Padrao_Modal) ────────────────────── #}
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup">
+    <h3>Confirmar</h3>
+    <p></p>
+    <div class="acoes">
+      <button type="button" class="btn btn-secundario" data-popup-cancelar>Cancelar</button>
+      <button type="button" class="btn btn-primary" data-popup-ok>Excluir</button>
+    </div>
+  </div>
+</div>
+
+<form id="formExcluir" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+var CLIENTES = {{ clientes|tojson }};
+
+/* Máscaras do form (main.js tem cpf/cnpj/telefone separados; aqui o doc
+   decide sozinho pelo tamanho) */
+function mascaraDoc(el) {
+  var digitos = el.value.replace(/\D/g, "");
+  mascara(el, digitos.length > 11 ? "cnpj" : "cpf");
+}
+function mascaraTelefone(el) { mascara(el, "telefone"); }
+function mascaraCep(el) {
+  var d = el.value.replace(/\D/g, "").slice(0, 8);
+  el.value = d.length > 5 ? d.slice(0, 5) + "-" + d.slice(5) : d;
+}
+
+function abrirFormCliente(titulo) {
+  document.getElementById("modalClienteTitulo").textContent = titulo;
+  abrirModal("modalCliente");
+  window.SelectBuscaInit();   // modal nasce escondido: init do selectbusca não roda sozinho
+}
+
+function novoCliente() {
+  var f = document.getElementById("formCliente");
+  f.reset();
+  f.querySelector("[name=id]").value = "";
+  f.querySelector("[name=uf]").value = "";              // reset() não limpa input hidden
+  document.getElementById("uf").value = "";
+  limparFoto();
+  abrirFormCliente("Novo cliente");
+}
+
+function editarCliente(id) {
+  var c = CLIENTES.find(function (x) { return x.id === id; });
+  if (!c) return;
+  var f = document.getElementById("formCliente");
+  f.querySelector("[name=id]").value = c.id;
+  ["razao_social","nome_fantasia","cpf_cnpj","ie_rg","email","telefone1",
+   "telefone2","cep","logradouro","numero","complemento","bairro","cidade",
+   "uf","observacoes"].forEach(function (k) {
+    var campo = f.querySelector("[name=" + k + "]");
+    if (campo) campo.value = (c[k] === null || c[k] === undefined) ? "" : c[k];
+  });
+  document.getElementById("uf").value = c.uf || "";     // texto visível do SelectBusca da UF
+  limparFoto();
+  abrirFormCliente("Editar cliente");
+}
+
+function excluirCliente(url, nome) {
+  // chamado pelo delegador com o botão (data-com-el): url e nome vêm do data-*
+  if (url && url.dataset) { nome = url.dataset.nome; url = url.dataset.url; }
+  confirmarPopup("Excluir cliente",
+    "Excluir “" + nome + "”? Ele sai da lista, mas o histórico de equipamentos " +
+    "e ordens de serviço fica no banco (soft delete).", "Excluir")
+    .then(function (ok) {
+      if (!ok) return;
+      var f = document.getElementById("formExcluir");
+      f.action = url;
+      f.submit();
+    });
+}
+
+/* ── Upload de foto: clique + drag-and-drop (Padrao_Upload_Arquivo) ─────── */
+(function () {
+  var inp = document.getElementById("fotoInp");
+  var drop = document.getElementById("fotoDrop");
+  var txt = document.getElementById("fotoTxt");
+  var arq = document.getElementById("fotoArq");
+  var icone = document.getElementById("fotoIcone");
+  var TXT_BASE = "Clique ou arraste a foto aqui (JPG, PNG ou WEBP, até 5 MB)";
+  if (!inp || !drop) return;
+
+  window.limparFoto = function () {
+    inp.value = "";
+    drop.classList.remove("loaded");
+    icone.className = "ph ph-file-arrow-up";
+    txt.textContent = TXT_BASE;
+    arq.textContent = "";
+  };
+
+  function mostra(f) {
+    if (!f) { window.limparFoto(); return; }
+    drop.classList.add("loaded");
+    icone.className = "ph ph-check-circle";
+    txt.textContent = "Foto pronta para enviar";
+    arq.textContent = f.name + " · " + (f.size / 1048576).toFixed(1) + " MB";
+  }
+
+  inp.addEventListener("change", function () { mostra(inp.files[0]); });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) {
+      e.preventDefault(); drop.classList.add("arrastando");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) {
+      e.preventDefault(); drop.classList.remove("arrastando");
+    });
+  });
+  drop.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files.length) {
+      inp.files = e.dataTransfer.files;   // o navegador não faz isso sozinho
+      mostra(e.dataTransfer.files[0]);
+    }
+  });
+})();
+</script>
+{% if modal_aberto %}
+<script nonce="{{ csp_nonce() }}">abrirFormCliente("Corrija os campos destacados");</script>
+{% elif editar_id %}
+<script nonce="{{ csp_nonce() }}">editarCliente({{ editar_id }});</script>
+{% endif %}
+{% endif %}{# pode_editar #}
+{% endblock %}

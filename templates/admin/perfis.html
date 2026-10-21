@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titulo %}Perfis e Permissões · OficinaApp{% endblock %}
+{% block topo %}Perfis e Permissões{% endblock %}
+
+{% block topo_acoes %}
+<a class="btn btn-secundario btn-sm" href="{{ url_for('admin.perfis') }}">
+  <i class="ph ph-arrows-clockwise"></i> Atualizar
+</a>
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Perfis cadastrados</span>
+      <span class="badge badge-azul"><i class="ph ph-shield-check"></i> {{ perfis|length }} perfil(s)</span>
+    </div>
+
+    <div class="tabela-wrap" style="border:0;border-radius:0">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Perfil</th>
+            <th>Descrição</th>
+            <th style="width:110px">Usuários</th>
+            <th style="width:230px">Acesso (módulos)</th>
+            <th style="width:170px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in perfis %}
+          <tr>
+            <td>
+              <strong>{{ p.nome }}</strong>
+              {% if p.id == 1 %}<span class="badge badge-accent">sistema</span>{% endif %}
+            </td>
+            <td style="color:var(--texto-secundario);max-width:520px">{{ p.descricao or '—' }}</td>
+            <td class="col-num">{{ p.qtd_usuarios }}</td>
+            <td>
+              <span class="badge badge-verde">ver {{ p.qtd_ver }}/{{ total_modulos }}</span>
+              <span class="badge badge-azul">editar {{ p.qtd_editar }}</span>
+            </td>
+            <td>
+              <div class="acoes">
+                <a class="btn btn-sm btn-secundario" href="{{ url_for('admin.perfis_permissoes', id_perfil=p.id) }}">
+                  <i class="ph ph-list-checks"></i> Matriz
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="vazio">Nenhum perfil cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-rodape" style="font-size:var(--fs-xs);color:var(--texto-fraco)">
+      EDITAR implica VER · o perfil Administrador mantém sempre <b>Usuários</b> e <b>Perfis</b>
+      para não trancar o sistema · cliente acessa por link público, sem módulos internos.
+      {% if pode_editar %}{% else %}
+      <span class="badge badge-ambar">somente leitura: seu perfil tem VER, não EDITAR</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

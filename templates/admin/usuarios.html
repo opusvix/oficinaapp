@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block titulo %}Usuários · OficinaApp{% endblock %}
+{% block topo %}Usuários e Permissões{% endblock %}
+
+{% block topo_acoes %}
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-clique="novoUsuario">
+  <i class="ph ph-user-plus"></i> Novo usuário
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {% if senha_nova %}
+  {# Aviso de consequência (Tela_Nao_Tem_Manual, exceção): a senha aparece UMA vez #}
+  <div class="card senha-unica" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <div class="senha-cab"><i class="ph ph-key"></i>
+        {{ "Usuário criado" if senha_nova.nova else "Senha redefinida" }}: {{ senha_nova.nome }} ({{ senha_nova.email }})</div>
+      <div class="senha-linha">
+        <code id="senhaGerada">{{ senha_nova.senha }}</code>
+        <button type="button" class="btn btn-secundario btn-sm" data-clique="copiarSenha"><i class="ph ph-copy"></i> Copiar</button>
+      </div>
+      <p class="ajuda-campo">Anote ou entregue agora: esta senha não aparece de novo. No primeiro acesso, {{ senha_nova.nome.split(' ')[0] }} cria a própria senha.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="tabela-wrap" data-tabela data-pref-key="admin_usuarios" data-titulo="Usuários">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="nome">Nome</th>
+              <th data-col-key="email">E-mail</th>
+              <th data-col-key="perfil">Perfil</th>
+              <th data-col-key="acesso">Último acesso</th>
+              <th data-col-key="ativo">Ativo</th>
+              <th class="celula-acoes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in usuarios %}
+            {% set protegido = u.id == eu or u.id == blindado %}
+            <tr data-nome="{{ u.nome }}" data-email="{{ u.email }}" data-perfil="{{ u.perfil }}"
+                data-acesso="{{ u.ultimo_login or 0 }}" data-ativo="{{ u.ativo }}" class="{{ '' if u.ativo else 'linha-inativa' }}">
+              <td>{{ u.nome }}{% if u.id == eu %} <span class="badge badge-accent">você</span>{% endif %}
+                {% if u.precisa_trocar_senha and u.ativo %}<span class="badge badge-ambar" title="Ainda não criou a própria senha">senha provisória</span>{% endif %}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ u.perfil }}</td>
+              <td>{{ u.ultimo_login_fmt }}</td>
+              <td>
+                {# Toggle On/Off (Padrao_Toggle_OnOff): salva no clique #}
+                <form method="post" action="{{ url_for('admin.usuario_ativo', id_usuario=u.id) }}" class="form-toggle">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <span class="cv-sw" title="{{ 'Você não pode desativar a si mesmo nem o administrador principal' if protegido else ('Desativar: não entra mais, os registros ficam' if u.ativo else 'Ativar de novo') }}">
+                    <input type="checkbox" id="ativo{{ u.id }}" data-auto-envia {{ 'checked' if u.ativo }} {{ 'disabled' if protegido or not pode_editar }}>
+                    <label for="ativo{{ u.id }}" aria-label="Ativo"></label>
+                  </span>
+                </form>
+              </td>
+              <td class="celula-acoes">
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone" title="Editar nome, e-mail e perfil"
+                        data-clique="editarUsuario" data-com-el data-id="{{ u.id }}" data-nome="{{ u.nome }}"
+                        data-email="{{ u.email }}" data-perfil="{{ u.id_perfil }}" data-perfil-nome="{{ u.perfil }}"><i class="ph ph-pencil-simple"></i></button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true" title="Seu perfil só pode ver"><i class="ph ph-pencil-simple"></i></button>
+                {% endif %}
+                {% if pode_editar and u.id != eu and u.ativo %}
+                <button type="button" class="btn btn-icone" title="Redefinir senha (gera uma provisória)"
+                        data-clique="redefinirSenha" data-com-el data-url="{{ url_for('admin.usuario_senha', id_usuario=u.id) }}"
+                        data-nome="{{ u.nome }}"><i class="ph ph-key"></i></button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="{{ 'Seu perfil só pode ver' if not pode_editar else ('A sua senha você troca no ícone de chave do rodapé' if u.id == eu else 'Usuário inativo: ative antes') }}"><i class="ph ph-key"></i></button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if pode_editar %}
+<div class="modal-overlay" id="modalUsuario">
+  <div class="modal sm">
+    <form method="post" action="{{ url_for('admin.usuario_salvar') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="id" id="uId" value="{{ valores.get('id', '') }}">
+      <div class="modal-cab">
+        <span class="modal-titulo" id="uTitulo">Novo usuário</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalUsuario" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <div class="campo {{ 'erro' if erros.get('nome') }}">
+          <label for="uNome">Nome <span class="obrig">*</span></label>
+          <input type="text" id="uNome" name="nome" maxlength="150" required value="{{ valores.get('nome', '') }}">
+          {% if erros.get('nome') %}<div class="erro-campo">{{ erros.nome }}</div>{% endif %}
+        </div>
+        <div class="campo {{ 'erro' if erros.get('email') }}">
+          <label for="uEmail">E-mail (é o login) <span class="obrig">*</span></label>
+          <input type="email" id="uEmail" name="email" maxlength="150" required value="{{ valores.get('email', '') }}">
+          {% if erros.get('email') %}<div class="erro-campo">{{ erros.email }}</div>{% endif %}
+        </div>
+        <div class="campo {{ 'erro' if erros.get('id_perfil') }}">
+          <label for="uPerfil">Perfil <span class="obrig">*</span></label>
+          <div class="selectbusca" id="sbPerfil" data-opcoes='{{ perfis_opcoes | tojson }}'>
+            <input type="hidden" name="id_perfil" id="uPerfilValor" value="{{ valores.get('id_perfil', '') }}">
+            <input class="sb-input" type="text" id="uPerfil" autocomplete="off" readonly placeholder="Escolha">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+          {% if erros.get('id_perfil') %}<div class="erro-campo">{{ erros.id_perfil }}</div>{% endif %}
+        </div>
+        <p class="ajuda-campo" id="uAjudaSenha">A senha é sorteada e aparece uma vez depois de salvar.</p>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalUsuario">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form id="formSenha" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
+var PERFIS = {{ perfis_opcoes | tojson }};
+
+function copiarSenha() {
+  var t = document.getElementById("senhaGerada").textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(t);
+}
+
+// Toggle salva no clique (form por linha); o servidor recusa se não puder e a tela volta como estava
+document.addEventListener("change", function (e) {
+  if (e.target && e.target.hasAttribute("data-auto-envia")) e.target.closest("form").submit();
+});
+
+{% if pode_editar %}
+function preencher(id, nome, email, perfil, perfilNome) {
+  document.getElementById("uId").value = id || "";
+  document.getElementById("uNome").value = nome || "";
+  document.getElementById("uEmail").value = email || "";
+  document.getElementById("uPerfilValor").value = perfil || "";
+  document.getElementById("uPerfil").value = perfilNome || "";
+  document.getElementById("uTitulo").textContent = id ? "Editar usuário" : "Novo usuário";
+  document.getElementById("uAjudaSenha").hidden = !!id;
+}
+
+function novoUsuario() {
+  var tec = PERFIS.filter(function (p) { return p.valor === 2; })[0];
+  preencher("", "", "", tec ? tec.valor : "", tec ? tec.rotulo : "");
+  abrirModal("modalUsuario");
+}
+
+function editarUsuario(btn) {
+  var d = btn.dataset;
+  preencher(d.id, d.nome, d.email, d.perfil, d.perfilNome);
+  abrirModal("modalUsuario");
+}
+
+function redefinirSenha(btn) {
+  confirmarPopup("Redefinir senha?",
+    "Gerar uma senha provisória para " + btn.dataset.nome + "? A atual para de funcionar e a pessoa cria outra no próximo acesso.",
+    "Redefinir").then(function (ok) {
+    if (!ok) return;
+    var f = document.getElementById("formSenha");
+    f.action = btn.dataset.url;
+    f.submit();
+  });
+}
+
+{% if erros %}
+// voltou com erro de validação: reabre o modal com o que foi digitado
+(function () {
+  var p = PERFIS.filter(function (x) { return String(x.valor) === {{ (valores.get('id_perfil', '') | string) | tojson }}; })[0];
+  document.getElementById("uPerfil").value = p ? p.rotulo : "";
+  document.getElementById("uTitulo").textContent = "{{ 'Editar usuário' if valores.get('id') else 'Novo usuário' }}";
+  abrirModal("modalUsuario");
+})();
+{% endif %}
+{% endif %}
+</script>
+{% endblock %}

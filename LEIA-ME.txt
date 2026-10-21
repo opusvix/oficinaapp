@@ -1,0 +1,56 @@
+OFICINAAPP - LEIA-ME
+====================
+
+Sistema da oficina: clientes, estoque, ordens de servico com link de aprovacao
+pro cliente, agenda dos tecnicos, caixa, contas a pagar e receber e relatorios.
+
+
+1. USAR NESTE COMPUTADOR
+------------------------
+Precisa do Python 3.12 instalado (python.org, marque "Add Python to PATH").
+
+  1) De dois cliques em iniciar.bat
+  2) Na primeira vez ele pergunta o e-mail do administrador (Enter usa
+     admin@oficina.local) e mostra a senha inicial na linha
+     "SENHA INICIAL SORTEADA". Anote: ela aparece uma vez so.
+  3) Abra o navegador em http://127.0.0.1:5000 e entre com esse e-mail e senha.
+     O sistema pede pra trocar a senha no primeiro acesso.
+  4) Pra desligar, feche a janela preta (ou Ctrl+C nela).
+
+Assim, so este computador acessa. Celular de tecnico e link do cliente
+precisam do sistema num servidor com https: veja MIGRACAO.md.
+
+
+2. ONDE FICAM OS DADOS
+----------------------
+  instance\oficina.db   todo o cadastro, OS, agenda e financeiro
+  static\uploads\       fotos de clientes e de equipamentos (antes e depois)
+  .env                  chave secreta e e-mail do administrador
+
+Copia de seguranca: com o sistema fechado, copie essas duas pastas e o .env
+pra um pendrive ou nuvem. Pra voltar, cole por cima com o sistema fechado.
+O .env tem a chave do sistema: nao mande por WhatsApp nem e-mail.
+
+
+3. PRIMEIROS PASSOS NO SISTEMA
+------------------------------
+Dentro do sistema, o item "Guia rapido" no menu lateral (grupo Ajuda) explica
+abrir OS, mandar orcamento, entregar, agendar, caixa e relatorios.
+
+Ordem sugerida no primeiro dia:
+  - Cadastre os tecnicos em Usuarios e Permissoes. Cada um recebe uma senha
+    provisoria, que aparece uma vez na tela, e cria a propria no 1o acesso.
+  - Cadastre as pecas mais usadas em Pecas / Estoque (com estoque minimo).
+  - Cadastre os clientes com bairro: a rota do dia agrupa por ele.
+
+
+4. PROBLEMAS COMUNS
+-------------------
+"Python nao encontrado": instale o Python e marque "Add Python to PATH".
+"SECRET_KEY ausente": apague a linha SECRET_KEY do .env e rode o iniciar.bat
+  de novo; ele gera outra. Quem estiver logado vai precisar entrar de novo.
+Esqueci a senha do administrador: no .env, ponha ADMIN_RESET_SENHA=1, rode o
+  iniciar.bat, anote a senha nova que aparece e TIRE a linha depois.
+Tecnico esqueceu a senha: em Usuarios e Permissoes, icone da chave na linha
+  dele gera uma provisoria.
+A porta 5000 esta ocupada: feche a outra janela do iniciar.bat que ficou aberta.

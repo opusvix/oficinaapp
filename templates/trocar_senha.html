@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <title>Trocar senha · OficinaApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/phosphor/style.css') }}">
+</head>
+<body>
+<main class="tela-auth">
+    <div class="card card-auth">
+        <div class="auth-marca">
+            <div class="logo-quadro"><i class="ph ph-wrench"></i></div>
+            <div>
+                <div class="marca-nome">OficinaApp</div>
+                <div class="marca-sub">Gestão de Assistência Técnica</div>
+            </div>
+        </div>
+
+        <h1 class="auth-titulo">Trocar a senha</h1>
+
+        {% if forcar %}
+        <p class="aviso-obrig">
+            <i class="ph ph-shield-check"></i>
+            Primeiro acesso: escolha uma senha nova para continuar.
+        </p>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:8px">
+                {% for cat, msg in messages %}
+                <div class="flash {{ cat }}"><i class="ph ph-warning-circle"></i> {{ msg }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="campo">
+                <label for="senha_atual">Senha atual</label>
+                <input type="password" id="senha_atual" name="senha_atual" required autofocus>
+            </div>
+            <div class="campo">
+                <label for="senha_nova">Nova senha <span class="ajuda-inline">(mínimo 8 caracteres)</span></label>
+                <input type="password" id="senha_nova" name="senha_nova" minlength="8" required>
+            </div>
+            <div class="campo">
+                <label for="senha_confirma">Confirmar nova senha</label>
+                <input type="password" id="senha_confirma" name="senha_confirma" minlength="8" required>
+            </div>
+            <button class="btn btn-primary btn-lg w-full" type="submit">
+                <i class="ph ph-floppy-disk"></i> Salvar senha
+            </button>
+        </form>
+
+        <a class="btn btn-fantasma w-full" href="{{ url_for('auth.logout') }}" style="margin-top:10px">
+            <i class="ph ph-sign-out"></i> Sair sem alterar
+        </a>
+    </div>
+</main>
+</body>
+</html>

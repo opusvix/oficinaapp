@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block titulo %}{{ cliente.razao_social }} · OficinaApp{% endblock %}
+{% block topo %}{{ cliente.razao_social }}{% endblock %}
+
+{% block topo_acoes %}
+<a class="btn btn-secundario btn-sm" href="{{ url_for('clientes.listar') }}">
+  <i class="ph ph-arrow-left"></i> Clientes
+</a>
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-clique="novoEquipamento">
+  <i class="ph ph-plus"></i> Novo equipamento
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {# ── Dados do cliente ────────────────────────────────────────────────── #}
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Dados do cliente</span>
+      {% if pode_editar %}
+      <a class="btn btn-secundario btn-sm"
+         href="{{ url_for('clientes.listar', editar=cliente.id) }}">
+        <i class="ph ph-pencil-simple"></i> Editar cadastro
+      </a>
+      {% endif %}
+    </div>
+    <div class="card-corpo">
+      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap">
+        {% if cliente.foto %}
+        <img class="foto-detalhe" src="{{ url_for('static', filename=cliente.foto) }}" alt="Foto de {{ cliente.razao_social }}">
+        {% endif %}
+        <div class="info-grid" style="flex:1; min-width:280px">
+          <div>
+            <span class="rotulo">Razão social / nome</span>
+            <span class="valor">{{ cliente.razao_social }}</span>
+          </div>
+          <div>
+            <span class="rotulo">Nome fantasia</span>
+            <span class="valor">{{ cliente.nome_fantasia or '—' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">CPF / CNPJ</span>
+            <span class="valor">{{ cliente.doc_fmt }}</span>
+          </div>
+          <div>
+            <span class="rotulo">IE / RG</span>
+            <span class="valor">{{ cliente.ie_rg or '—' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">E-mail</span>
+            <span class="valor">{{ cliente.email or '—' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">Telefone 1</span>
+            <span class="valor">{{ cliente.tel_fmt }}</span>
+          </div>
+          <div>
+            <span class="rotulo">Telefone 2</span>
+            <span class="valor">{{ cliente.telefone2 or '—' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">CEP</span>
+            <span class="valor">{{ cliente.cep_fmt or '—' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">Endereço</span>
+            <span class="valor">{{ cliente.logradouro or '—' }}{{ ', ' ~ cliente.numero if cliente.numero else '' }}{{ ' — ' ~ cliente.complemento if cliente.complemento else '' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">Bairro</span>
+            <span class="valor">{{ cliente.bairro or '—' }}</span>
+          </div>
+          <div>
+            <span class="rotulo">Cidade / UF</span>
+            <span class="valor">{{ cliente.cidade_uf }}</span>
+          </div>
+        </div>
+      </div>
+      {% if cliente.observacoes %}
+      <p class="legenda-tabela" style="margin-top:16px">
+        <i class="ph ph-note"></i> {{ cliente.observacoes }}
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Histórico de equipamentos ───────────────────────────────────────── #}
+  <div class="card" style="margin-top:18px">
+    {% if equipamentos %}
+    <div class="tabela-wrap" data-tabela data-pref-key="cliente_equipamentos"
+         data-titulo="Equipamentos de {{ cliente.razao_social }}">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="codigo" class="col-num">Código</th>
+              <th data-col-key="patrimonio">Patrimônio / Tag</th>
+              <th data-col-key="modelo">Modelo</th>
+              <th data-col-key="marca">Marca</th>
+              <th data-col-key="serial">Nº de série</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in equipamentos %}
+            <tr data-codigo="{{ e.id }}"
+                data-patrimonio="{{ e.patrimonio }}"
+                data-modelo="{{ e.modelo or '' }}"
+                data-marca="{{ e.marca or '' }}"
+                data-serial="{{ e.numero_serie or '' }}"
+                data-busca="{{ e.patrimonio }} {{ e.modelo or '' }} {{ e.marca or '' }} {{ e.numero_serie or '' }}">
+              <td class="col-num">{{ e.id }}</td>
+              <td><span class="badge badge-accent"><i class="ph ph-tag"></i> {{ e.patrimonio }}</span></td>
+              <td>{{ e.modelo or '—' }}</td>
+              <td>{{ e.marca or '—' }}</td>
+              <td class="col-num">{{ e.numero_serie or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="vazio-tabela">
+      <i class="ph ph-cpu"></i>
+      <span class="titulo">Nenhum equipamento cadastrado</span>
+      <span class="desc">Cadastre o forno, a batedeira ou o freezer deste cliente
+        para abrir ordens de serviço e acompanhar o histórico de consertos.</span>
+      {% if pode_editar %}
+      <button class="btn btn-primary" type="button" data-clique="novoEquipamento">
+        <i class="ph ph-plus"></i> Novo equipamento
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Modal novo equipamento (Patrimônio em branco vira ESG{id}) ─────────── #}
+{% if pode_editar %}
+<div class="modal-overlay" id="modalEquipamento">
+  <div class="modal md">
+    <form method="post"
+          action="{{ url_for('clientes.novo_equipamento', id_cliente=cliente.id) }}"
+          id="formEquipamento">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-cab">
+        <span class="modal-titulo">Novo equipamento</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalEquipamento"
+                aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <div class="campo">
+          <label for="patrimonio">Patrimônio / Tag</label>
+          <input type="text" id="patrimonio" name="patrimonio" maxlength="50"
+                 placeholder="ex: ESG123" autocomplete="off">
+          <div class="ajuda">Em branco, o sistema gera a Tag sozinho (ESG{id}) ao salvar.</div>
+        </div>
+        <div class="form-grid">
+          <div class="campo">
+            <label for="modelo">Modelo</label>
+            <input type="text" id="modelo" name="modelo" maxlength="150"
+                   placeholder="ex: Freezer horizontal 300L">
+          </div>
+          <div class="campo">
+            <label for="marca">Marca</label>
+            <input type="text" id="marca" name="marca" maxlength="100"
+                   placeholder="ex: Electrolux">
+          </div>
+          <div class="campo">
+            <label for="numero_serie">Nº de série</label>
+            <input type="text" id="numero_serie" name="numero_serie" maxlength="100">
+          </div>
+          <div class="campo full">
+            <label for="descricao">Descrição</label>
+            <textarea id="descricao" name="descricao"
+                      placeholder="ex: Não gela direto depois de 30 min ligado."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalEquipamento">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}{# pode_editar #}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+function novoEquipamento() {
+  document.getElementById("formEquipamento").reset();
+  abrirModal("modalEquipamento");
+}
+</script>
+{% endif %}
+{% endblock %}

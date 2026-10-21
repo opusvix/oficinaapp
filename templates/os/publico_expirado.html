@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Link expirado · OficinaApp{% endblock %}
+
+{% block conteudo_publico %}
+<div class="container">
+  <div class="card" style="text-align:center; padding:48px 20px">
+    <i class="ph ph-clock" style="font-size:48px;color:var(--ambar-escuro);display:block;margin-bottom:16px"></i>
+    <h2>Este link expirou</h2>
+    <p>O link da OS #{{ os.id }} venceu. Fale com a oficina e peça um link novo.</p>
+  </div>
+</div>
+{% endblock %}

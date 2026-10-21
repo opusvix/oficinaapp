@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block titulo %}Estoque de Peças · OficinaApp{% endblock %}
+{% block topo %}Estoque de Peças{% endblock %}
+
+{% block topo_acoes %}
+{% if pode_editar %}
+<a class="btn btn-secundario btn-sm" href="{{ url_for('estoque.importar') }}">
+  <i class="ph ph-upload-simple"></i> Importar
+</a>
+<button class="btn btn-primary btn-sm" type="button" data-clique="novoPeca">
+  <i class="ph ph-plus"></i> Nova peça
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {% if so_baixo %}
+  <div class="filtro-ativo">
+    <span class="badge badge-vermelho"><i class="ph ph-warning"></i> Só peças abaixo do estoque mínimo</span>
+    <a href="{{ url_for('estoque.listar') }}" class="btn btn-secundario btn-sm"><i class="ph ph-x"></i> Ver todas</a>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="tabela-wrap" data-tabela data-pref-key="estoque" data-titulo="Peças / Estoque">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="codigo">Código</th>
+              <th data-col-key="descricao">Descrição</th>
+              <th data-col-key="unidade" class="col-num">Unidade</th>
+              <th data-col-key="custo" class="col-num">Custo</th>
+              <th data-col-key="venda" class="col-num">Venda</th>
+              <th data-col-key="estoque" class="col-num">Estoque</th>
+              <th data-col-key="minimo" class="col-num">Mínimo</th>
+              <th data-col-key="localizacao">Localização</th>
+              <th class="celula-acoes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pecas %}
+            <tr data-codigo="{{ p.codigo }}"
+                data-descricao="{{ p.descricao }}"
+                data-unidade="{{ p.unidade }}"
+                data-custo="{{ p.preco_custo }}"
+                data-venda="{{ p.preco_venda }}"
+                data-estoque="{{ p.estoque_atual }}"
+                data-minimo="{{ p.estoque_minimo }}"
+                data-localizacao="{{ p.localizacao or '' }}"
+                data-busca="{{ p.codigo }} {{ p.descricao }} {{ p.localizacao or '' }}">
+              <td><a class="linha-forca" href="{{ url_for('estoque.detalhe', id_peca=p.id) }}">{{ p.codigo }}</a></td>
+              <td>{{ p.descricao }}</td>
+              <td class="col-num">{{ p.unidade }}</td>
+              <td class="col-num">{{ p.preco_custo_fmt }}</td>
+              <td class="col-num">{{ p.preco_venda_fmt }}</td>
+              <td class="col-num {% if p.estoque_baixo %}estoque-baixo{% endif %}">
+                <span class="badge {% if p.estoque_baixo %}badge-vermelho{% else %}badge-azul{% endif %}">
+                  {{ p.estoque_atual_fmt }}
+                </span>
+              </td>
+              <td class="col-num">{{ p.estoque_minimo }}</td>
+              <td>{{ p.localizacao or '—' }}</td>
+              <td class="celula-acoes">
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone" title="Editar peça"
+                        data-clique="editarPeca" data-arg="{{ p.id }}">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                {% endif %}
+                <a class="btn btn-icone" title="Ver histórico de movimentos"
+                   href="{{ url_for('estoque.detalhe', id_peca=p.id) }}">
+                  <i class="ph ph-eye"></i>
+                </a>
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone"
+                        title="Excluir peça (soft delete)"
+                        data-url="{{ url_for('estoque.excluir', id_peca=p.id) }}"
+                        data-clique="excluirPeca" data-com-el
+                        data-nome="{{ p.codigo }}">
+                  <i class="ph ph-trash"></i>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="Exclusão disponível apenas para o perfil Administrador">
+                  <i class="ph ph-trash"></i>
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if not pecas %}
+    <div class="vazio-tabela">
+      <i class="ph ph-package"></i>
+      <span class="titulo">Nenhuma peça cadastrada</span>
+      <span class="desc">Cadastre a primeira peça para controlar o estoque e registrar entradas/saídas.</span>
+      {% if pode_editar %}
+      <button class="btn btn-primary" type="button" data-clique="novoPeca">
+        <i class="ph ph-plus"></i> Nova peça
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <p class="legenda-tabela">
+    <i class="ph ph-info-circle"></i>
+    <span class="badge badge-vermelho" style="font-size:11px">Estoque baixo</span> quando o estoque atual está
+    no mínimo ou abaixo dele. Exclusão é soft delete: o histórico de movimentos é preservado.
+  </p>
+</div>
+
+{# ── Modal cadastro/edição (Padrao_Modal, .modal-md) ─────────────── #}
+{% if pode_editar %}
+<div class="modal-overlay" id="modalPeca">
+  <div class="modal md">
+    <form method="post" action="{{ url_for('estoque.salvar') }}" id="formPeca">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="id" value="{{ valores.get('id', '') }}">
+
+      <div class="modal-cab">
+        <span class="modal-titulo" id="modalPecaTitulo">Nova peça</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalPeca" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+
+      <div class="modal-corpo">
+        <div class="form-grid">
+          <div class="campo {{ 'erro' if erros.get('codigo') }}">
+            <label for="codigo">Código <span class="obrig">*</span></label>
+            <input type="text" id="codigo" name="codigo" maxlength="50" required
+                   value="{{ valores.get('codigo', '') }}" placeholder="ex: FILTRO001">
+            {% if erros.get('codigo') %}<div class="erro-campo">{{ erros.codigo }}</div>{% endif %}
+          </div>
+
+          <div class="campo full {{ 'erro' if erros.get('descricao') }}">
+            <label for="descricao">Descrição <span class="obrig">*</span></label>
+            <input type="text" id="descricao" name="descricao" maxlength="200" required
+                   value="{{ valores.get('descricao', '') }}" placeholder="ex: Filtro de óleo">
+            {% if erros.get('descricao') %}<div class="erro-campo">{{ erros.descricao }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('unidade') }}">
+            <label for="unidade">Unidade</label>
+            {# SelectBusca, nunca <select> nativo (Sem_Select_Nativo) #}
+            <div class="selectbusca sb-in-dialog" id="sbUnidade" data-opcoes='{{ unidades_opcoes | tojson }}'>
+              <input type="hidden" name="unidade" value="{{ valores.get('unidade') or 'UN' }}">
+              <input class="sb-input" type="text" id="unidade" autocomplete="off" readonly value="{{ valores.get('unidade') or 'UN' }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('unidade') %}<div class="erro-campo">{{ erros.unidade }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('preco_custo') }}">
+            <label for="preco_custo">Preço de custo</label>
+            <input type="text" id="preco_custo" name="preco_custo" maxlength="12"
+                   value="{{ valores.get('preco_custo', '0') }}" placeholder="0,00">
+            {% if erros.get('preco_custo') %}<div class="erro-campo">{{ erros.preco_custo }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('preco_venda') }}">
+            <label for="preco_venda">Preço de venda</label>
+            <input type="text" id="preco_venda" name="preco_venda" maxlength="12"
+                   value="{{ valores.get('preco_venda', '0') }}" placeholder="0,00">
+            {% if erros.get('preco_venda') %}<div class="erro-campo">{{ erros.preco_venda }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('estoque_atual') }}">
+            <label for="estoque_atual">Estoque atual</label>
+            <input type="text" id="estoque_atual" name="estoque_atual" maxlength="12"
+                   value="{{ valores.get('estoque_atual', '0') }}" placeholder="0">
+            {% if erros.get('estoque_atual') %}<div class="erro-campo">{{ erros.estoque_atual }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('estoque_minimo') }}">
+            <label for="estoque_minimo">Estoque mínimo</label>
+            <input type="text" id="estoque_minimo" name="estoque_minimo" maxlength="12"
+                   value="{{ valores.get('estoque_minimo', '0') }}" placeholder="0">
+            {% if erros.get('estoque_minimo') %}<div class="erro-campo">{{ erros.estoque_minimo }}</div>{% endif %}
+          </div>
+
+          <div class="campo full">
+            <label for="localizacao">Localização</label>
+            <input type="text" id="localizacao" name="localizacao" maxlength="100"
+                   value="{{ valores.get('localizacao', '') }}" placeholder="ex: Prateleira A-12">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalPeca">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Popup de confirmação da exclusão ────────────────────── #}
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup">
+    <h3>Confirmar</h3>
+    <p></p>
+    <div class="acoes">
+      <button type="button" class="btn btn-secundario" data-popup-cancelar>Cancelar</button>
+      <button type="button" class="btn btn-primary" data-popup-ok>Excluir</button>
+    </div>
+  </div>
+</div>
+
+<form id="formExcluir" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+var PECAS = {{ pecas|tojson }};
+
+function abrirFormPeca(titulo) {
+  document.getElementById("modalPecaTitulo").textContent = titulo;
+  abrirModal("modalPeca");
+}
+
+function novoPeca() {
+  var f = document.getElementById("formPeca");
+  f.reset();
+  f.querySelector("[name=id]").value = "";
+  f.querySelector("[name=unidade]").value = "UN";       // reset() não limpa input hidden
+  document.getElementById("unidade").value = "UN";
+  abrirFormPeca("Nova peça");
+}
+
+function editarPeca(id) {
+  var p = PECAS.find(function (x) { return x.id === id; });
+  if (!p) return;
+  var f = document.getElementById("formPeca");
+  f.querySelector("[name=id]").value = p.id;
+  ["codigo","descricao","unidade","preco_custo","preco_venda","estoque_atual","estoque_minimo","localizacao"].forEach(function (k) {
+    var campo = f.querySelector("[name=" + k + "]");
+    if (campo) campo.value = (p[k] === null || p[k] === undefined) ? "" : p[k];
+  });
+  document.getElementById("unidade").value = p.unidade || "UN";   // texto visível do SelectBusca
+  abrirFormPeca("Editar peça");
+}
+
+function excluirPeca(url, nome) {
+  // chamado pelo delegador com o botão (data-com-el): url e nome vêm do data-*
+  if (url && url.dataset) { nome = url.dataset.nome; url = url.dataset.url; }
+  confirmarPopup("Excluir peça",
+    "Excluir “" + nome + "”? O registro sai da lista, mas o histórico de movimentos é preservado (soft delete).",
+    "Excluir").then(function (ok) {
+    if (!ok) return;
+    var f = document.getElementById("formExcluir");
+    f.action = url;
+    f.submit();
+  });
+}
+</script>
+{% if modal_aberto %}
+<script nonce="{{ csp_nonce() }}">abrirFormPeca("Corrija os campos destacados");</script>
+{% endif %}
+{% endif %}
+{% endblock %}

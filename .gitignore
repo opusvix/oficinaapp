@@ -1,0 +1,68 @@
+# ============================================================
+# .gitignore - OficinaApp
+# ============================================================
+
+# Python
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+*.egg/
+
+# Banco de dados local
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testes / Cobertura
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.mypy_cache/
+
+# Versões e backups (não versionam junto)
+z_Versoes/
+00_GENESIS/
+backups/
+gerar_versao.bat
+gerar_versao.command
+restaurar_ultima_versao.bat
+restaurar_ultima_versao.command
+backup-log-genesis-antes-*.zip
+LOG_ARQUIVO_*.md
+
+# Uploads de usuário (conteúdo gerado em runtime)
+static/uploads/
+
+# Cache / Temporários
+*.tmp
+*.temp
+.cache/
+
+# Certificados / Chaves
+*.pem
+*.key
+*.crt
+*.pfx

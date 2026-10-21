@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block titulo %}{{ peca.codigo }} · OficinaApp{% endblock %}
+{% block topo %}{{ peca.codigo }} — {{ peca.descricao }}{% endblock %}
+
+{% block topo_acoes %}
+<a class="btn btn-secundario btn-sm" href="{{ url_for('estoque.listar') }}">
+  <i class="ph ph-arrow-left"></i> Peças
+</a>
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-clique="novaEntrada">
+  <i class="ph ph-arrow-circle-up"></i> Entrada
+</button>
+<button class="btn btn-secundario btn-sm" type="button" data-clique="novaSaida">
+  <i class="ph ph-arrow-circle-down"></i> Saída
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {# ── Dados da peça ────────────────────────────────────────────────── #}
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Dados da peça</span>
+      {% if pode_editar %}
+      <a class="btn btn-secundario btn-sm"
+         href="{{ url_for('estoque.listar', editar=peca.id) }}"><i class="ph ph-pencil-simple"></i> Editar</a>
+      {% endif %}
+    </div>
+    <div class="card-corpo">
+      <div class="info-grid" style="flex:1; min-width:280px">
+        <div>
+          <span class="rotulo">Código</span>
+          <span class="valor">{{ peca.codigo }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Descrição</span>
+          <span class="valor">{{ peca.descricao }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Unidade</span>
+          <span class="valor">{{ peca.unidade }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Preço de custo</span>
+          <span class="valor">{{ peca.preco_custo_fmt }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Preço de venda</span>
+          <span class="valor">{{ peca.preco_venda_fmt }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Estoque atual</span>
+          <span class="valor {% if peca.estoque_baixo %}estoque-baixo{% endif %}">{{ peca.estoque_atual_fmt }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Estoque mínimo</span>
+          <span class="valor">{{ peca.estoque_minimo }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Localização</span>
+          <span class="valor">{{ peca.localizacao or '—' }}</span>
+        </div>
+      </div>
+      {% if peca.estoque_baixo %}
+      <p class="legenda-tabela" style="margin-top:12px">
+        <i class="ph ph-warning-circle"></i>
+        <span class="badge badge-vermelho">Estoque abaixo do mínimo</span> — registre uma entrada para repor.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Histórico de movimentos ───────────────────────────────────────── #}
+  <div class="card" style="margin-top:18px">
+    <div class="card-cab">
+      <span class="card-titulo">Histórico de movimentos</span>
+    </div>
+    {% if movimentos %}
+    <div class="tabela-wrap" data-tabela data-pref-key="estoque_movimentos_{{ peca.id }}" data-titulo="Movimentos de {{ peca.codigo }}">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="data" class="col-num">Data</th>
+              <th data-col-key="tipo">Tipo</th>
+              <th data-col-key="qtd" class="col-num">Quantidade</th>
+              <th data-col-key="obs">Observações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in movimentos %}
+            <tr data-data="{{ m.datestamp }}"
+                data-tipo="{{ m.tipo }}"
+                data-qtd="{{ m.quantidade }}"
+                data-obs="{{ m.observacoes or '' }}"
+                data-busca="{{ m.tipo }} {{ m.quantidade }} {{ m.observacoes or '' }}">
+              <td class="col-num">{{ m.datestamp | data_hora }}</td>
+              <td>
+                <span class="badge {% if m.tipo == 'ENTRADA' %}badge-verde{% else %}badge-vermelho{% endif %}">
+                  {{ m.tipo }}
+                </span>
+              </td>
+              <td class="col-num">{{ m.quantidade }}</td>
+              <td>{{ m.observacoes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+    <div class="vazio-tabela">
+      <i class="ph ph-history"></i>
+      <span class="titulo">Sem movimentos registrados</span>
+      <span class="desc">Use Entrada ou Saída para registrar a movimentação de estoque desta peça.</span>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Modal entrada/saída ─────────────────────────────────────────────── #}
+{% if pode_editar %}
+<div class="modal-overlay" id="modalMovimento">
+  <div class="modal sm">
+    <form method="post" action="{{ url_for('estoque.movimento', id_peca=peca.id) }}" id="formMovimento">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="tipo" id="movTipo" value="">
+
+      <div class="modal-cab">
+        <span class="modal-titulo" id="modalMovTitulo">Entrada de estoque</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalMovimento" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+
+      <div class="modal-corpo">
+        <div class="campo">
+          <label for="movQtd">Quantidade <span class="obrig">*</span></label>
+          <input type="text" id="movQtd" name="quantidade" maxlength="12" required placeholder="0">
+        </div>
+        <div class="campo">
+          <label for="movObs">Observações</label>
+          <input type="text" id="movObs" name="observacoes" maxlength="200" placeholder="ex: Nota fiscal 123">
+        </div>
+      </div>
+
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalMovimento">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Confirmar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+function novaEntrada() {
+  document.getElementById("movTipo").value = "ENTRADA";
+  document.getElementById("modalMovTitulo").textContent = "Entrada de estoque";
+  document.getElementById("formMovimento").reset();
+  abrirModal("modalMovimento");
+}
+
+function novaSaida() {
+  document.getElementById("movTipo").value = "SAIDA";
+  document.getElementById("modalMovTitulo").textContent = "Saída de estoque";
+  document.getElementById("formMovimento").reset();
+  abrirModal("modalMovimento");
+}
+</script>
+{% endif %}
+{% endblock %}

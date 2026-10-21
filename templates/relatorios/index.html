@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block titulo %}Relatórios · OficinaApp{% endblock %}
+{% block topo %}Relatórios{% endblock %}
+
+{% block conteudo %}
+{% from "_periodo.html" import periodo %}
+{% set filtros = dict(periodo=periodo_sel, de=periodo_de if periodo_sel == 'custom' else None,
+                      ate=periodo_ate if periodo_sel == 'custom' else None, tecnico=tecnico_sel or None) %}
+<div class="container">
+
+  {# Abas (Padrao_Tabs). Trocar de aba mantém período e técnico. #}
+  <div class="rl-tabs">
+    {% for chave, rotulo, icone in abas %}
+    <button type="button" class="rl-tab {{ 'ativo' if aba == chave else '' }}"
+            data-vai="{{ url_for('relatorios.index', aba=chave, **filtros) }}">
+      <i class="ph {{ icone }}"></i> {{ rotulo }}
+    </button>
+    {% endfor %}
+  </div>
+
+  {# Relatório não tem KPI (Listagens_sem_KPI): filtros e tabela #}
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <form method="get" class="fu-bar">
+        <input type="hidden" name="aba" value="{{ aba }}">
+        {% if aba != 'clientes' %}
+        <div class="g largo">
+          <span class="fu-lbl">Técnico</span>
+          <div class="selectbusca" id="fuTecnico" data-opcoes='{{ tecnicos_opcoes | tojson }}'>
+            <input type="hidden" name="tecnico" value="{{ tecnico_sel or '' }}">
+            <input class="sb-input" type="text" autocomplete="off" value="{{ tecnico_rotulo }}" aria-label="Técnico">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {% endif %}
+        {% if aba == 'tecnicos' %}
+        <div class="g largo">
+          <span class="fu-lbl">Status</span>
+          <div class="selectbusca" id="fuStatus" data-opcoes='{{ status_opcoes | tojson }}'>
+            <input type="hidden" name="status" value="{{ status_sel }}">
+            <input class="sb-input" type="text" autocomplete="off" readonly value="{{ status_rotulo }}" aria-label="Status">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {% endif %}
+        {{ periodo(rotulo=corte, opcoes=periodos, sel=periodo_sel, de=periodo_de, ate=periodo_ate) }}
+        <div class="acoes-filtros">
+          <a href="{{ url_for('relatorios.index', aba=aba, periodo='todos') }}" class="btn btn-secundario">Limpar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    {% if aba == 'tecnicos' %}
+    <div class="tabela-wrap" data-tabela data-pref-key="rel_os_por_tecnico" data-titulo="OS por técnico">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead><tr>
+            <th data-col-key="tecnico">Técnico</th>
+            <th data-col-key="total" class="col-num">OS abertas</th>
+            <th data-col-key="andamento" class="col-num">Em andamento</th>
+            <th data-col-key="entregues" class="col-num">Entregues</th>
+            <th data-col-key="recusadas" class="col-num">Recusadas</th>
+            <th data-col-key="taxa" class="col-num">Orçamentos aprovados</th>
+            <th data-col-key="valor" class="col-num">Valor entregue</th>
+          </tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr data-tecnico="{{ l.tecnico }}" data-total="{{ l.total }}" data-andamento="{{ l.andamento }}"
+                data-entregues="{{ l.entregues }}" data-recusadas="{{ l.recusadas }}" data-taxa="{{ l.taxa if l.taxa is not none else -1 }}"
+                data-valor="{{ l.valor }}">
+              <td>{{ l.tecnico }}</td>
+              <td class="col-num">{{ l.total }}</td>
+              <td class="col-num">{{ l.andamento }}</td>
+              <td class="col-num">{{ l.entregues }}</td>
+              <td class="col-num">{{ l.recusadas }}</td>
+              <td class="col-num">{{ (l.taxa ~ '%') if l.taxa is not none else '—' }}</td>
+              <td class="col-num num-dinheiro">{{ l.valor | moeda }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if linhas %}
+          <tfoot><tr>
+            <td>Total</td><td class="col-num">{{ total.total }}</td><td class="col-num">{{ total.andamento }}</td>
+            <td class="col-num">{{ total.entregues }}</td><td class="col-num">{{ total.recusadas }}</td><td></td>
+            <td class="col-num num-dinheiro">{{ total.valor | moeda }}</td>
+          </tr></tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    {% elif aba == 'tempo' %}
+    <div class="tabela-wrap" data-tabela data-pref-key="rel_tempo_medio" data-titulo="Tempo médio (OS entregues)">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead><tr>
+            <th data-col-key="tecnico">Técnico</th>
+            <th data-col-key="qtd" class="col-num">OS entregues</th>
+            <th data-col-key="aprov" class="col-num">Abertura → aprovação</th>
+            <th data-col-key="exec" class="col-num">Aprovação → entrega</th>
+            <th data-col-key="total" class="col-num">Abertura → entrega</th>
+          </tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr data-tecnico="{{ l.tecnico }}" data-qtd="{{ l.qtd }}" data-aprov="{{ l.h_aprov or 0 }}"
+                data-exec="{{ l.h_exec or 0 }}" data-total="{{ l.h_total or 0 }}">
+              <td>{{ l.tecnico }}</td>
+              <td class="col-num">{{ l.qtd }}</td>
+              <td class="col-num">{{ duracao_texto(l.h_aprov) }}</td>
+              <td class="col-num">{{ duracao_texto(l.h_exec) }}</td>
+              <td class="col-num">{{ duracao_texto(l.h_total) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if linhas %}
+          <tfoot><tr>
+            <td>Geral</td><td class="col-num">{{ total.qtd }}</td>
+            <td class="col-num">{{ duracao_texto(total.h_aprov) }}</td><td class="col-num">{{ duracao_texto(total.h_exec) }}</td>
+            <td class="col-num">{{ duracao_texto(total.h_total) }}</td>
+          </tr></tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    {% elif aba == 'pecas' %}
+    <div class="tabela-wrap" data-tabela data-pref-key="rel_pecas_mais_usadas" data-titulo="Peças mais usadas (OS entregues)">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead><tr>
+            <th data-col-key="codigo">Código</th>
+            <th data-col-key="descricao">Peça</th>
+            <th data-col-key="origem">Origem</th>
+            <th data-col-key="qtd" class="col-num">Quantidade</th>
+            <th data-col-key="n_os" class="col-num">Em quantas OS</th>
+            <th data-col-key="valor" class="col-num">Valor cobrado</th>
+          </tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr data-codigo="{{ l.codigo }}" data-descricao="{{ l.descricao }}" data-origem="{{ 'estoque' if l.estoque else 'avulso' }}" data-qtd="{{ l.qtd }}"
+                data-n_os="{{ l.n_os }}" data-valor="{{ l.valor }}">
+              <td>{{ l.codigo or '—' }}</td>
+              <td>{{ l.descricao }}</td>
+              <td>{% if l.estoque %}Estoque{% else %}<span class="badge badge-cinza" title="Item digitado na OS, sem peça do estoque">Fora do estoque</span>{% endif %}</td>
+              <td class="col-num">{{ ('%g' % l.qtd) | replace('.', ',') }} {{ l.unidade }}</td>
+              <td class="col-num">{{ l.n_os }}</td>
+              <td class="col-num num-dinheiro">{{ l.valor | moeda }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if linhas %}
+          <tfoot><tr>
+            <td></td><td>Total</td><td></td><td></td><td></td><td class="col-num num-dinheiro">{{ total.valor | moeda }}</td>
+          </tr></tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="tabela-wrap" data-tabela data-pref-key="rel_faturamento_cliente" data-titulo="Faturamento por cliente">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead><tr>
+            <th data-col-key="cliente">Cliente</th>
+            <th data-col-key="doc">CPF/CNPJ</th>
+            <th data-col-key="titulos" class="col-num">Títulos recebidos</th>
+            <th data-col-key="n_os" class="col-num">OS</th>
+            <th data-col-key="recebido" class="col-num">Recebido</th>
+            <th data-col-key="ticket" class="col-num">Média por título</th>
+            <th data-col-key="aberto" class="col-num">Em aberto hoje</th>
+          </tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr data-cliente="{{ l.cliente }}" data-doc="{{ l.cpf_cnpj }}" data-titulos="{{ l.titulos }}"
+                data-n_os="{{ l.n_os }}" data-recebido="{{ l.recebido }}" data-ticket="{{ l.ticket }}" data-aberto="{{ l.aberto }}">
+              <td>{{ l.cliente }}</td>
+              <td>{{ (l.cpf_cnpj | documento) or '—' }}</td>
+              <td class="col-num">{{ l.titulos }}</td>
+              <td class="col-num">{{ l.n_os }}</td>
+              <td class="col-num num-dinheiro">{{ l.recebido | moeda }}</td>
+              <td class="col-num num-dinheiro">{{ l.ticket | moeda }}</td>
+              <td class="col-num num-dinheiro {{ 'texto-vermelho' if l.aberto > 0 else '' }}">{{ l.aberto | moeda }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if linhas %}
+          <tfoot><tr>
+            <td>Total</td><td></td><td class="col-num">{{ total.titulos }}</td><td class="col-num">{{ total.n_os }}</td>
+            <td class="col-num num-dinheiro">{{ total.recebido | moeda }}</td><td></td>
+            <td class="col-num num-dinheiro">{{ total.aberto | moeda }}</td>
+          </tr></tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not linhas %}
+    <div class="vazio-tabela">
+      <i class="ph ph-chart-bar"></i>
+      <span class="titulo">Nada neste período</span>
+      <span class="desc">O período corta pela data de {{ corte | lower }}. Troque o período ou clique em Limpar para ver tudo.</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Guia rápido · OficinaApp{% endblock %}
+{% block topo %}Guia rápido{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+  <div class="guia-grade">
+    {% for t in topicos + gerais %}
+    <div class="card guia-card">
+      <div class="card-cab"><span class="card-titulo"><i class="ph {{ t.icone }}"></i> {{ t.titulo }}</span></div>
+      <div class="card-corpo">
+        <ol class="guia-passos">
+          {% for passo in t.passos %}<li>{{ passo }}</li>{% endfor %}
+        </ol>
+        {% if t.link %}
+        <a class="btn btn-secundario btn-sm" href="{{ t.link }}"><i class="ph ph-arrow-right"></i> {{ t.link_rotulo }}</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

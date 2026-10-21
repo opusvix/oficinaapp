@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block titulo %}Rotas do dia · OficinaApp{% endblock %}
+{% block topo %}Agenda e Rotas{% endblock %}
+
+{% block conteudo %}
+{% from "agenda/_abas.html" import abas %}
+<div class="container">
+  {{ abas("rotas") }}
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <form method="get" class="fu-bar">
+        <div class="g">
+          <span class="fu-lbl">Dia</span>
+          <input type="date" name="data" value="{{ dia_iso }}">
+        </div>
+        {% if not so_a_propria %}
+        <div class="g largo">
+          <span class="fu-lbl">Técnico</span>
+          <div class="selectbusca" id="fuTecnico" data-opcoes='{{ tecnicos_opcoes | tojson }}'>
+            <input type="hidden" name="tecnico" value="{{ tecnico_sel or '' }}">
+            <input class="sb-input" type="text" autocomplete="off" value="{{ tecnico_rotulo }}" aria-label="Técnico">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="acoes-filtros">
+          <a href="{{ url_for('agenda.rotas') }}" class="btn btn-secundario">Limpar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Rotas de {{ dia.strftime('%d/%m/%Y') }}{% if dia == hoje %} (hoje){% endif %}</span>
+      <div class="ag-nav">
+        <a class="btn btn-secundario btn-sm" title="Dia anterior"
+           href="{{ url_for('agenda.rotas', data=dia_ant, tecnico=tecnico_sel if not so_a_propria else None) }}"><i class="ph ph-caret-left"></i></a>
+        <a class="btn btn-secundario btn-sm" href="{{ url_for('agenda.rotas', tecnico=tecnico_sel if not so_a_propria else None) }}">Hoje</a>
+        <a class="btn btn-secundario btn-sm" title="Próximo dia"
+           href="{{ url_for('agenda.rotas', data=dia_prox, tecnico=tecnico_sel if not so_a_propria else None) }}"><i class="ph ph-caret-right"></i></a>
+      </div>
+    </div>
+    <div class="card-corpo">
+      {% for r in por_tecnico %}
+      <div class="rt-tecnico">
+        <div class="rt-cab">
+          <span class="rt-nome"><i class="ph ph-user"></i> {{ r.tecnico }} · {{ r.paradas | length }} visita{{ 's' if r.paradas | length != 1 else '' }}</span>
+          {% if r.link %}
+          <a class="btn btn-secundario btn-sm" href="{{ r.link }}" target="_blank" rel="noopener noreferrer">
+            <i class="ph ph-navigation-arrow"></i> Abrir rota no mapa
+          </a>
+          {% endif %}
+        </div>
+        {% if r.trocas_marcada > r.trocas_sugerida %}
+        <p class="rt-aviso"><i class="ph ph-warning"></i>
+          Os horários marcados fazem o técnico voltar a um bairro já visitado ({{ r.trocas_marcada }} trocas de bairro;
+          agrupando, seriam {{ r.trocas_sugerida }}). A ordem abaixo junta as visitas do mesmo bairro: vale remarcar.</p>
+        {% endif %}
+        <ol class="rt-paradas">
+          {% for b in r.blocos %}
+          <li class="rt-bloco">
+            <div class="rt-bairro"><i class="ph ph-map-pin-area"></i> {{ b.bairro }} · {{ b.cidade }}</div>
+            {% for v in b.visitas %}
+            <div class="rt-parada">
+              <span class="rt-hora">{{ v.hora_ini }}</span>
+              <span class="rt-desc">
+                <a href="{{ url_for('os.detalhe', id_os=v.id_os) }}">OS #{{ v.id_os }} · {{ v.patrimonio }}</a> — {{ v.cliente }}
+                <small>{{ v.endereco or "Endereço não cadastrado" }}</small>
+              </span>
+              {% if v.mapa %}<a class="btn btn-icone" href="{{ v.mapa }}" target="_blank" rel="noopener noreferrer" title="Abrir no mapa"><i class="ph ph-map-pin"></i></a>{% endif %}
+            </div>
+            {% endfor %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% else %}
+      <div class="vazio-tabela" style="padding:24px">
+        <i class="ph ph-map-trifold"></i>
+        <span class="titulo">Nenhuma visita agendada neste dia</span>
+        <span class="desc">Agende na aba "Agenda da semana"; a rota do dia aparece aqui agrupada por bairro.</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab"><span class="card-titulo">OS sem visita, por bairro</span></div>
+    <div class="card-corpo">
+      {% if fila %}
+      <div class="rt-fila">
+        {% for bairro, oss in fila %}
+        <div class="rt-fila-item">
+          <div class="rt-bairro"><i class="ph ph-map-pin-area"></i> {{ bairro }} <span class="badge badge-cinza">{{ oss | length }}</span></div>
+          <ul>
+            {% for o in oss %}
+            <li><a href="{{ url_for('os.detalhe', id_os=o.id) }}">OS #{{ o.id }} · {{ o.patrimonio }}</a> — {{ o.cliente }}
+              <small>{{ o.tecnico or "sem técnico" }}</small></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="ajuda-campo">Toda OS em andamento já tem visita marcada.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

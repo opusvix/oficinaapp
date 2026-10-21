@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+{% block titulo %}OS #{{ os.id }} · OficinaApp{% endblock %}
+{% block topo %}OS #{{ os.id }}{% endblock %}
+
+{% block topo_acoes %}
+<a class="btn btn-secundario btn-sm" href="{{ url_for('os.listar') }}">
+  <i class="ph ph-arrow-left"></i> Voltar
+</a>
+<a class="btn btn-secundario btn-sm" href="{{ url_for('os.comprovante', id_os=os.id) }}" target="_blank" rel="noopener">
+  <i class="ph ph-file-pdf"></i> Comprovante / PDF
+</a>
+{% if pode_editar and os.orcamento_status in ("pendente", "recusado") and os.status in ("aberta", "avaliacao") %}
+<form method="post" action="{{ url_for('os.gerar_token', id_os=os.id) }}" id="formToken">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-primary btn-sm" type="button" data-clique="gerarToken">
+    <i class="ph ph-share"></i> Link aprovação
+  </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {# ── Dados da OS ────────────────────────────────────────────────── #}
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Dados da OS</span>
+      <span class="badge badge-{% if os.status == 'entregue' %}verde{% elif os.status == 'recusada' %}vermelho{% elif os.status == 'aprovada' %}azul{% elif os.status == 'em_andamento' %}ambar{% else %}cinza{% endif %}">
+        {{ os.status.replace('_', ' ').title() }}
+      </span>
+    </div>
+    <div class="card-corpo">
+      <div class="info-grid" style="flex:1; min-width:280px">
+        <div>
+          <span class="rotulo">Patrimônio / Tag</span>
+          <span class="valor">{{ os.patrimonio }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Cliente</span>
+          <span class="valor">{{ os.cliente }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Técnico</span>
+          <span class="valor">{{ os.tecnico_nome or 'Não atribuído' }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Abertura</span>
+          <span class="valor">{{ os.data_abertura | data_hora }}</span>
+        </div>
+        <div>
+          <span class="rotulo">Orçamento</span>
+          <span class="valor badge badge-{% if os.orcamento_status == 'aprovado' %}verde{% elif os.orcamento_status == 'recusado' %}vermelho{% else %}ambar{% endif %}">
+            {{ (os.orcamento_valor or 0) | moeda }} · {{ os.orcamento_status }}
+          </span>
+        </div>
+        <div>
+          <span class="rotulo">Deslocamento</span>
+          <span class="valor">{{ (os.custo_deslocamento or 0) | moeda }}</span>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <span class="rotulo">Descrição inicial</span>
+        <p class="valor" style="white-space:pre-wrap">{{ os.descricao_inicial or '—' }}</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Link de aprovação: o flash some no refresh, então ele fica aqui ── #}
+  {% if pode_editar and token_valido and os.status != "entregue" %}
+  {% set pede_entrega = os.status == "em_andamento" and os.entrega_solicitada_em %}
+  {% set texto_whats = "OS #" ~ os.id ~ " (" ~ os.patrimonio ~ "): "
+       ~ ("confira o serviço, assine e confirme a entrega" if pede_entrega
+          else "confira o orçamento e responda se aprova ou recusa")
+       ~ ". " ~ link_publico %}
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab">
+      <span class="card-titulo">{{ "Link de validação da ENTREGUE" if pede_entrega else "Link de aprovação do cliente" }}</span>
+      <span class="badge badge-ambar">expira {{ os.token_expira | data_hora }}</span>
+    </div>
+    <div class="card-corpo">
+      <div class="im-acoes">
+        <input type="text" class="link-copiar" id="linkPublico" value="{{ link_publico }}" readonly>
+        <button type="button" class="btn btn-secundario btn-sm" data-clique="copiarLink" data-com-el>
+          <i class="ph ph-copy"></i> Copiar link
+        </button>
+        <a class="btn btn-secundario btn-sm" target="_blank" rel="noopener"
+           href="https://wa.me/?text={{ texto_whats | urlencode }}">
+          <i class="ph ph-whatsapp-logo"></i> Enviar no WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Itens da OS ────────────────────────────────────────────────── #}
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab">
+      <span class="card-titulo">Itens / Peças</span>
+      {% if pode_editar and os.status in ("aberta", "avaliacao") %}
+      <button class="btn btn-secundario btn-sm" type="button" data-clique="abrirItem">
+        <i class="ph ph-plus"></i> Adicionar item
+      </button>
+      {% endif %}
+    </div>
+    <div class="card-corpo">
+      {% if itens %}
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th class="col-num">Peça</th>
+            <th>Descrição</th>
+            <th class="col-num">Qtd</th>
+            <th class="col-num">Unitário</th>
+            <th class="col-num">Subtotal</th>
+            <th class="celula-acoes"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set itens_abertos = pode_editar and os.status in ("aberta", "avaliacao") %}
+          {% for i in itens %}
+          <tr>
+            <td class="col-num">{{ i.peca_codigo or '—' }}</td>
+            <td>{{ i.descricao }}</td>
+            <td class="col-num">{{ i.quantidade }}</td>
+            <td class="col-num">{{ (i.preco_unitario or 0) | moeda }}</td>
+            <td class="col-num">{{ (i.subtotal or 0) | moeda }}</td>
+            <td class="celula-acoes">
+              {% if itens_abertos %}
+              <button type="button" class="btn btn-icone" title="Remover item"
+                      data-clique="removerItem" data-com-el data-nome="{{ i.descricao }}"
+                      data-url="{{ url_for('os.remover_item', id_os=os.id, id_item=i.id) }}">
+                <i class="ph ph-trash"></i>
+              </button>
+              {% else %}
+              <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                      title="{{ 'Itens não mudam depois que o cliente aprova' if pode_editar else 'Seu perfil só pode ver ordens de serviço' }}">
+                <i class="ph ph-trash"></i>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {# Orçamento = soma dos itens (calculado no servidor, os.recalcula_orcamento) #}
+        <tfoot>
+          <tr><td colspan="4"><strong>Orçamento (soma dos itens)</strong></td>
+              <td class="col-num"><strong>{{ (os.orcamento_valor or 0) | moeda }}</strong></td><td></td></tr>
+          <tr><td colspan="4">Deslocamento</td>
+              <td class="col-num">{{ (os.custo_deslocamento or 0) | moeda }}</td><td></td></tr>
+          <tr><td colspan="4"><strong>Total se aprovar</strong></td>
+              <td class="col-num"><strong>{{ ((os.orcamento_valor or 0) + (os.custo_deslocamento or 0)) | moeda }}</strong></td><td></td></tr>
+        </tfoot>
+      </table>
+      {% else %}
+      <div class="vazio-tabela" style="padding:24px">
+        <i class="ph ph-package"></i>
+        <span class="titulo">Sem itens cadastrados</span>
+        <span class="desc">Adicione peças ou serviços à OS.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Fotos da OS (Padrao_Upload_Arquivo) ────────────────────────── #}
+  {% if pode_editar and os.status in ("aberta", "avaliacao", "aprovada", "em_andamento") %}
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab">
+      <span class="card-titulo">Fotos da OS</span>
+    </div>
+    <div class="card-corpo">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px">
+
+        {# Foto ANTES: na recepção, antes do serviço #}
+        <form method="post" enctype="multipart/form-data" class="im-zona"
+              action="{{ url_for('os.foto', id_os=os.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="momento" value="antes">
+          <span class="rotulo">Foto ANTES (na recepção)</span>
+          {% if os.foto_antes %}
+          <img class="im-atual" src="{{ url_for('static', filename=os.foto_antes) }}"
+               alt="Equipamento antes do serviço">
+          {% endif %}
+          <label class="im-drop" for="fotoAntesInp">
+            <i class="ph ph-file-arrow-up"></i>
+            <div class="im-txt">Clique ou arraste a foto aqui (JPG, PNG ou WEBP, até 5 MB)</div>
+            <small class="im-arq"></small>
+          </label>
+          <input type="file" id="fotoAntesInp" name="foto" accept="image/*" class="im-inp">
+          <div class="im-acoes">
+            <span class="im-msg" aria-live="polite"></span>
+            <button type="submit" class="btn btn-secundario btn-sm" disabled>
+              <i class="ph ph-upload-simple"></i> Salvar foto ANTES
+            </button>
+          </div>
+        </form>
+
+        {# Foto DEPOIS: só depois que o cliente aprova o orçamento #}
+        {% if os.status in ("aprovada", "em_andamento") %}
+        <form method="post" enctype="multipart/form-data" class="im-zona"
+              action="{{ url_for('os.foto', id_os=os.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="momento" value="depois">
+          <span class="rotulo">Foto DEPOIS (serviço concluído)</span>
+          {% if os.foto_depois %}
+          <img class="im-atual" src="{{ url_for('static', filename=os.foto_depois) }}"
+               alt="Equipamento depois do serviço">
+          {% endif %}
+          <label class="im-drop" for="fotoDepoisInp">
+            <i class="ph ph-file-arrow-up"></i>
+            <div class="im-txt">Clique ou arraste a foto aqui (JPG, PNG ou WEBP, até 5 MB)</div>
+            <small class="im-arq"></small>
+          </label>
+          <input type="file" id="fotoDepoisInp" name="foto" accept="image/*" class="im-inp">
+          <div class="im-acoes">
+            <span class="im-msg" aria-live="polite"></span>
+            <button type="submit" class="btn btn-secundario btn-sm" disabled>
+              <i class="ph ph-upload-simple"></i> Salvar foto DEPOIS
+            </button>
+          </div>
+        </form>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Execução e entrega (checklist 139) ─────────────────────────── #}
+  {% if pode_editar and os.status in ("aprovada", "em_andamento", "entregue") %}
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab">
+      <span class="card-titulo">Execução e entrega</span>
+    </div>
+    <div class="card-corpo">
+
+      {% if os.status in ("aprovada", "em_andamento") %}
+      <form method="post" action="{{ url_for('os.execucao', id_os=os.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="campo">
+          <label for="descricaoExecucao">O que foi feito <span class="obrig">*</span></label>
+          <textarea id="descricaoExecucao" name="descricao_execucao" rows="4" maxlength="4000"
+                    placeholder="ex: Substituí o capacitor de partida e ajustei o termostato.">{{ os.descricao_execucao or '' }}</textarea>
+        </div>
+        {# Toggle on/off da casa (Padrao_Toggle_OnOff): nada de checkbox nativo à vista.
+           Desvio consciente: aqui ele vai junto com o form (Salvar execução), não grava sozinho. #}
+        <div style="display:flex; align-items:center; gap:10px">
+          <span class="cv-sw">
+            <input type="checkbox" id="testadoFuncionamento" name="testado_funcionamento" value="1"
+                   {% if os.testado_funcionamento %}checked{% endif %}>
+            <label for="testadoFuncionamento"></label>
+          </span>
+          <label for="testadoFuncionamento">Testei o funcionamento agora, com o equipamento ligado</label>
+        </div>
+        <div style="margin-top:12px">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="ph ph-floppy-disk"></i> Salvar execução
+          </button>
+        </div>
+      </form>
+
+      {% if os.status == "em_andamento" %}
+      <hr style="border:0; border-top:1px solid var(--borda); margin:16px 0">
+      {% if os.entrega_solicitada_em %}
+      <div class="flash aviso" style="margin-bottom:12px">
+        <i class="ph ph-hourglass-medium"></i>
+        Aguardando o cliente conferir, assinar e confirmar ENTREGUE pelo link (pedido em {{ os.entrega_solicitada_em | data_hora }}).
+        Se mudar a execução ou a foto DEPOIS, o pedido é cancelado e precisa ser feito de novo.
+      </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('os.entregar', id_os=os.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="ph ph-paper-plane-tilt"></i>
+          {{ "Gerar link de novo" if os.entrega_solicitada_em else "Pedir validação ENTREGUE ao cliente" }}
+        </button>
+      </form>
+      {% endif %}
+
+      {% else %}
+      <div class="info-grid" style="flex:1">
+        <div>
+          <span class="rotulo">Serviço executado</span>
+          <p class="valor" style="white-space:pre-wrap">{{ os.descricao_execucao or '—' }}</p>
+        </div>
+        <div>
+          <span class="rotulo">Testado</span>
+          <span class="valor badge badge-{{ 'verde' if os.testado_funcionamento else 'cinza' }}">
+            {{ 'Sim' if os.testado_funcionamento else 'Não' }}
+          </span>
+        </div>
+        <div>
+          <span class="rotulo">Entrega confirmada pelo cliente</span>
+          <span class="valor">{{ os.data_entrega | data_hora }}</span>
+        </div>
+      </div>
+      {% if os.assinatura_cliente %}
+      <div style="margin-top:12px">
+        <span class="rotulo">Assinatura do cliente</span>
+        <img class="assinatura-img" src="{{ os.assinatura_cliente }}" alt="Assinatura do cliente na entrega">
+      </div>
+      {% endif %}
+      {% endif %}
+
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Adicionar item (modal pequeno) ─────────────────────────────── #}
+{# ATENÇÃO: precisa ficar DENTRO de um {% block %} — conteúdo fora de block
+   num template com {% extends %} é descartado e o modal nunca renderiza. #}
+{% if pode_editar %}
+<div class="modal-overlay" id="modalItem">
+  <div class="modal sm">
+    <form method="post" action="{{ url_for('os.adicionar_item', id_os=os.id) }}" id="formItem">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="modal-cab">
+        <span class="modal-titulo">Adicionar item</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalItem" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+
+      <div class="modal-corpo">
+        <div class="campo">
+          <label for="itemPeca">Peça do estoque (opcional)</label>
+          <div class="selectbusca" id="itemPecaBusca" data-src="{{ url_for('estoque.api_pecas') }}">
+            <input type="hidden" name="id_peca" id="itemPecaId" value="">
+            <input class="sb-input" type="text" id="itemPeca" maxlength="120"
+                   autocomplete="off" placeholder="Digite para buscar por código ou peça">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="itemDescricao">Descrição <span class="obrig">*</span></label>
+          <input type="text" id="itemDescricao" name="descricao" maxlength="200" required placeholder="ex: Filtro de óleo">
+        </div>
+        <div class="campo">
+          <label for="itemQtd">Quantidade <span class="obrig">*</span></label>
+          <input type="text" id="itemQtd" name="quantidade" maxlength="12" required value="1">
+        </div>
+        <div class="campo">
+          <label for="itemPreco">Preço unitário</label>
+          <input type="text" id="itemPreco" name="preco_unitario" maxlength="12" value="0,00">
+        </div>
+      </div>
+
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalItem">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce() }}">
+function abrirItem() {
+  var form = document.getElementById("formItem");
+  if (form) form.reset();
+  var sb = document.getElementById("itemPecaBusca");
+  if (sb) {
+    var txt = sb.querySelector(".sb-input");
+    var hid = sb.querySelector("input[type=hidden]");
+    if (txt) txt.value = "";
+    if (hid) hid.value = "";
+    sb.classList.remove("aberto");
+  }
+  abrirModal("modalItem");
+}
+
+/* Selecionar peça preenche descrição e preço; a digitação manual continua livre
+   (SelectBusca limpa id_peca sozinha quando o usuário digita). */
+document.addEventListener("sb:selecionado", function (e) {
+  var sb = e.target;
+  if (!sb || sb.id !== "itemPecaBusca") return;
+  var it = e.detail || {};
+  var desc = document.getElementById("itemDescricao");
+  var preco = document.getElementById("itemPreco");
+  if (desc && it.descricao) desc.value = it.descricao;
+  if (preco && it.preco) preco.value = it.preco;
+});
+
+/* ── Upload de foto: clique + drag-and-drop (Padrao_Upload_Arquivo) ────────
+   Uma implementação só pras duas zonas (ANTES e DEPOIS): o form inteiro carrega
+   data-momento, e o botão só destrava quando o arquivo passa nos dois testes
+   (image/* e 5 MB) — mesmos testes que o backend faz no servidor. */
+(function () {
+  var MAX = 5 * 1048576;
+  var TXT_BASE = "Clique ou arraste a foto aqui (JPG, PNG ou WEBP, até 5 MB)";
+
+  document.querySelectorAll("form.im-zona").forEach(function (form) {
+    var inp = form.querySelector(".im-inp");
+    var drop = form.querySelector(".im-drop");
+    var txt = form.querySelector(".im-txt");
+    var arq = form.querySelector(".im-arq");
+    var icone = form.querySelector(".im-drop i");
+    var msg = form.querySelector(".im-msg");
+    var btn = form.querySelector("button[type=submit]");
+    if (!inp || !drop || !btn) return;
+
+    function repouso() {
+      drop.classList.remove("loaded", "arrastando");
+      icone.className = "ph ph-file-arrow-up";
+      txt.textContent = TXT_BASE;
+      arq.textContent = "";
+      btn.disabled = true;
+    }
+
+    function mostra(f) {
+      repouso();
+      msg.textContent = "";
+      if (!f) { inp.value = ""; return; }
+      if (!/^image\//.test(f.type)) {
+        msg.textContent = "Formato não aceito. Use JPG, PNG ou WEBP.";
+        inp.value = "";
+        return;
+      }
+      if (f.size > MAX) {
+        msg.textContent = "Imagem acima de 5 MB. Reduza e tente de novo.";
+        inp.value = "";
+        return;
+      }
+      drop.classList.add("loaded");
+      icone.className = "ph ph-check-circle";
+      txt.textContent = "Foto pronta para enviar";
+      arq.textContent = f.name + " · " + (f.size / 1048576).toFixed(1) + " MB";
+      btn.disabled = false;
+    }
+
+    inp.addEventListener("change", function () { mostra(inp.files[0]); });
+    ["dragenter", "dragover"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) {
+        e.preventDefault(); drop.classList.add("arrastando");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) {
+        e.preventDefault(); drop.classList.remove("arrastando");
+      });
+    });
+    drop.addEventListener("drop", function (e) {
+      if (e.dataTransfer && e.dataTransfer.files.length) {
+        inp.files = e.dataTransfer.files;   // o navegador não faz isso sozinho
+        mostra(e.dataTransfer.files[0]);
+      }
+    });
+  });
+})();
+
+function copiarLink(btn) {
+  var inp = document.getElementById("linkPublico");
+  if (!inp) return;
+  function ok() {
+    var original = btn.innerHTML;
+    btn.innerHTML = '<i class="ph ph-check"></i> Copiado';
+    setTimeout(function () { btn.innerHTML = original; }, 2000);
+  }
+  inp.focus();
+  inp.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(inp.value).then(ok, function () {
+      document.execCommand("copy"); ok();
+    });
+  } else {
+    document.execCommand("copy");
+    ok();
+  }
+}
+
+function gerarToken() {
+  confirmarDestrutivo(
+    "Gerar link de aprovação?",
+    "O cliente poderá aprovar ou recusar o orçamento por este link. Ele expira em 7 dias.",
+    "Gerar link"
+  ).then(function (sim) {
+    if (sim) document.getElementById("formToken").submit();
+  });
+}
+
+function removerItem(btn) {
+  confirmarDestrutivo(
+    "Remover item?",
+    "Remover “" + btn.dataset.nome + "” da OS? O orçamento é recalculado na hora.",
+    "Remover"
+  ).then(function (sim) {
+    if (!sim) return;
+    var f = document.getElementById("formRemoverItem");
+    f.action = btn.dataset.url;
+    f.submit();
+  });
+}
+</script>
+<form id="formRemoverItem" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endblock %}

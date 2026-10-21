@@ -1,0 +1,39 @@
+{#- Seleção de período (Padrao_Barra_de_Filtros): UM componente pra todas as telas.
+    Chips = toggle tipo 1. Cada chip é um botão de submit do form GET da tela,
+    então não precisa de JS. O cálculo das datas é do servidor (os.periodo_do_request),
+    em data LOCAL.
+
+    Uso:  {% from "_periodo.html" import periodo %}
+          {{ periodo(rotulo="Abertura", opcoes=periodos, sel=periodo_sel, de=periodo_de, ate=periodo_ate) }}
+    O rótulo é o NOME da data filtrada, nunca a palavra "Período". -#}
+{% macro periodo(rotulo, opcoes, sel, de=None, ate=None) %}
+<div class="g">
+  <span class="fu-lbl">{{ rotulo }}</span>
+  <div class="fu-presets" role="group" aria-label="{{ rotulo }}">
+    {% for chave, nome in opcoes %}
+    <button type="submit" name="periodo" value="{{ chave }}"
+            class="{{ 'on' if sel == chave else '' }}"
+            aria-pressed="{{ 'true' if sel == chave else 'false' }}">{{ nome }}</button>
+    {% endfor %}
+  </div>
+  {% if sel == "todos" %}
+  <span class="fu-ajuda">Sem filtro de período</span>
+  {% endif %}
+</div>
+{#- O hidden "periodo" vem DEPOIS dos chips de propósito: chip clicado vai primeiro
+    no GET e request.args.get pega o primeiro. Sem chip (botão Aplicar), vale o hidden. -#}
+{% if sel == "custom" %}
+{# Customizado abre PREENCHIDO (mês atual quando ainda não há datas) #}
+<input type="hidden" name="periodo" value="custom">
+<div class="g">
+  <span class="fu-lbl">De</span>
+  <input type="date" name="de" value="{{ de or '' }}" required>
+</div>
+<div class="g">
+  <span class="fu-lbl">Até</span>
+  <input type="date" name="ate" value="{{ ate or '' }}" required>
+</div>
+{% else %}
+<input type="hidden" name="periodo" value="{{ sel }}">
+{% endif %}
+{% endmacro %}

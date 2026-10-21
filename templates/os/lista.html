@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block titulo %}Ordens de Serviço · OficinaApp{% endblock %}
+{% block topo %}Ordens de Serviço{% endblock %}
+
+{% block topo_acoes %}
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-vai="{{ url_for('os.nova') }}">
+  <i class="ph ph-plus"></i> Nova OS
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {# ── Filtros (Padrao_Barra_de_Filtros): SelectBusca, chips de período, --fu-h ── #}
+  {% from "_periodo.html" import periodo %}
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <form method="get" class="fu-bar" id="filtrosOS">
+        <div class="g largo">
+          <span class="fu-lbl">Status</span>
+          <div class="selectbusca" id="fuStatus" data-opcoes='{{ status_opcoes | tojson }}'>
+            <input type="hidden" name="status" value="{{ status_sel }}">
+            <input class="sb-input" type="text" autocomplete="off" readonly
+                   value="{{ rotulos_status.get(status_sel, 'Todos') }}" aria-label="Status">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {% if not so_as_proprias %}
+        <div class="g largo">
+          <span class="fu-lbl">Técnico</span>
+          {% set tec_atual = (tecnicos | selectattr("id", "equalto", tecnico_sel) | first) %}
+          <div class="selectbusca" id="fuTecnico"
+               data-opcoes='{{ ([{"valor": "", "rotulo": "Todos"}] + tecnicos_opcoes) | tojson }}'>
+            <input type="hidden" name="tecnico" value="{{ tecnico_sel or '' }}">
+            <input class="sb-input" type="text" autocomplete="off"
+                   value="{{ tec_atual.nome if tec_atual else 'Todos' }}" aria-label="Técnico">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {% endif %}
+        {{ periodo(rotulo="Abertura", opcoes=periodos, sel=periodo_sel, de=periodo_de, ate=periodo_ate) }}
+        <div class="acoes-filtros">
+          <a href="{{ url_for('os.listar', periodo='todos') }}" class="btn btn-secundario">Limpar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── Listagem ─────────────────────────────────────────────────────── #}
+  <div class="card">
+    <div class="tabela-wrap" data-tabela data-pref-key="os_listagem" data-titulo="Ordens de Serviço">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="id" class="col-num">ID</th>
+              <th data-col-key="patrimonio">Patrimônio / Tag</th>
+              <th data-col-key="cliente">Cliente</th>
+              <th data-col-key="tecnico">Técnico</th>
+              <th data-col-key="status">Status</th>
+              <th data-col-key="orcamento" class="col-num">Orçamento</th>
+              <th data-col-key="abertura" class="col-num">Abertura</th>
+              <th class="celula-acoes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in oss %}
+            <tr data-id="{{ o.id }}"
+                data-patrimonio="{{ o.patrimonio }}"
+                data-cliente="{{ o.cliente }}"
+                data-tecnico="{{ o.tecnico or '—' }}"
+                data-status="{{ o.status }}"
+                data-orcamento="{{ o.orcamento_valor or '0' }}"
+                data-abertura="{{ o.data_abertura }}"
+                data-busca="{{ o.id }} {{ o.patrimonio }} {{ o.cliente }} {{ o.tecnico or '' }} {{ o.status }}">
+              <td class="col-num"><a class="linha-forca" href="{{ url_for('os.detalhe', id_os=o.id) }}">{{ o.id }}</a></td>
+              <td><span class="badge badge-accent">{{ o.patrimonio }}</span></td>
+              <td>{{ o.cliente }}</td>
+              <td>{{ o.tecnico or '—' }}</td>
+              <td>
+                <span class="badge badge-{% if o.status == 'entregue' %}verde{% elif o.status == 'recusada' %}vermelho{% elif o.status == 'aprovada' %}azul{% elif o.status == 'em_andamento' %}ambar{% else %}cinza{% endif %}">
+                  {{ o.status.replace('_', ' ').title() }}
+                </span>
+              </td>
+              <td class="col-num">{{ (o.orcamento_valor or 0) | moeda }}</td>
+              <td class="col-num">{{ o.data_abertura | so_data }}</td>
+              <td class="celula-acoes">
+                <a class="btn btn-icone" title="Ver OS"
+                   href="{{ url_for('os.detalhe', id_os=o.id) }}">
+                  <i class="ph ph-eye"></i>
+                </a>
+                {# Slots FIXOS (Padrao_Tabela): ver, editar, PDF, cancelar. Quem não pode
+                   vê o ícone esmaecido com o motivo, o slot nunca some. #}
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone"
+                        title="Editar OS"
+                        data-vai="{{ url_for('os.detalhe', id_os=o.id) }}">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="Seu perfil só pode ver ordens de serviço">
+                  <i class="ph ph-pencil-simple"></i>
+                </button>
+                {% endif %}
+                <a class="btn btn-icone" title="Comprovante / PDF" target="_blank" rel="noopener"
+                   href="{{ url_for('os.comprovante', id_os=o.id) }}">
+                  <i class="ph ph-file-pdf"></i>
+                </a>
+                {% if pode_editar and o.status in ("aberta", "avaliacao") %}
+                <button type="button" class="btn btn-icone" title="Cancelar OS"
+                        data-clique="cancelarOS" data-com-el
+                        data-url="{{ url_for('os.cancelar', id_os=o.id) }}" data-nome="OS #{{ o.id }} ({{ o.patrimonio }})">
+                  <i class="ph ph-prohibit"></i>
+                </button>
+                {% elif pode_editar %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="OS {{ o.status.replace('_', ' ') }} não pode ser cancelada: só aberta ou em avaliação">
+                  <i class="ph ph-prohibit"></i>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="Cancelamento disponível para quem edita ordens de serviço">
+                  <i class="ph ph-prohibit"></i>
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if not oss %}
+    <div class="vazio-tabela">
+      <i class="ph ph-clipboard"></i>
+      <span class="titulo">Nenhuma ordem de serviço encontrada</span>
+      <span class="desc">Abra a primeira OS para começar a controlar os consertos da oficina.</span>
+      {% if pode_editar %}
+      <button class="btn btn-primary" type="button" data-vai="{{ url_for('os.nova') }}">
+        <i class="ph ph-plus"></i> Nova OS
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<form id="formCancelarOS" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+<script nonce="{{ csp_nonce() }}">
+function cancelarOS(btn) {
+  confirmarDestrutivo(
+    "Cancelar " + btn.dataset.nome + "?",
+    "A OS sai da lista e o link do cliente para de funcionar. Só OS aberta ou em avaliação pode ser cancelada.",
+    "Cancelar OS"
+  ).then(function (sim) {
+    if (!sim) return;
+    var f = document.getElementById("formCancelarOS");
+    f.action = btn.dataset.url;
+    f.submit();
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

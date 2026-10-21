@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block titulo %}Agenda · OficinaApp{% endblock %}
+{% block topo %}Agenda e Rotas{% endblock %}
+
+{% block topo_acoes %}
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-clique="abrirAgendar" data-arg="">
+  <i class="ph ph-calendar-plus"></i> Agendar visita
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+{% from "agenda/_abas.html" import abas %}
+<div class="container">
+  {{ abas("semana") }}
+
+  {# Filtros (Padrao_Barra_de_Filtros). Período da agenda = a semana (navegação abaixo). #}
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <form method="get" class="fu-bar">
+        <input type="hidden" name="semana" value="{{ seg.isoformat() }}">
+        {% if not so_a_propria %}
+        <div class="g largo">
+          <span class="fu-lbl">Técnico</span>
+          <div class="selectbusca" id="fuTecnico" data-opcoes='{{ tecnicos_opcoes | tojson }}'>
+            <input type="hidden" name="tecnico" value="{{ tecnico_sel or '' }}">
+            <input class="sb-input" type="text" autocomplete="off" value="{{ tecnico_rotulo }}" aria-label="Técnico">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="g largo">
+          <span class="fu-lbl">Situação</span>
+          <div class="selectbusca" id="fuStatus" data-opcoes='{{ status_opcoes | tojson }}'>
+            <input type="hidden" name="status" value="{{ status_sel }}">
+            <input class="sb-input" type="text" autocomplete="off" readonly value="{{ status_rotulo }}" aria-label="Situação">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        <div class="acoes-filtros">
+          <a href="{{ url_for('agenda.semana') }}" class="btn btn-secundario">Limpar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Semana de {{ titulo_semana }}</span>
+      <div class="ag-nav">
+        <a class="btn btn-secundario btn-sm" title="Semana anterior"
+           href="{{ url_for('agenda.semana', semana=semana_ant, tecnico=tecnico_sel if not so_a_propria else None, status=status_sel) }}"><i class="ph ph-caret-left"></i></a>
+        <a class="btn btn-secundario btn-sm"
+           href="{{ url_for('agenda.semana', tecnico=tecnico_sel if not so_a_propria else None, status=status_sel) }}">Hoje</a>
+        <a class="btn btn-secundario btn-sm" title="Próxima semana"
+           href="{{ url_for('agenda.semana', semana=semana_prox, tecnico=tecnico_sel if not so_a_propria else None, status=status_sel) }}"><i class="ph ph-caret-right"></i></a>
+      </div>
+    </div>
+    <div class="card-corpo">
+      <div class="ag-grade">
+        {% for d in dias %}
+        <div class="ag-dia {{ 'hoje' if d.hoje else '' }} {{ 'passado' if d.passado else '' }}">
+          <div class="ag-dia-cab">
+            <span>{{ d.rotulo }}</span>
+            {% if pode_editar and not d.passado %}
+            <button type="button" class="btn btn-icone" title="Agendar neste dia"
+                    data-clique="abrirAgendar" data-arg="{{ d.iso }}"><i class="ph ph-plus"></i></button>
+            {% endif %}
+          </div>
+          {% for v in d.visitas %}
+          <div class="ag-visita st-{{ v.status }}">
+            <div class="ag-hora">{{ v.hora_ini }}–{{ v.hora_fim }}</div>
+            <a class="ag-os" href="{{ url_for('os.detalhe', id_os=v.id_os) }}">OS #{{ v.id_os }} · {{ v.patrimonio }}</a>
+            <div class="ag-cli">{{ v.cliente }}</div>
+            <div class="ag-sub">{{ v.bairro or "Sem bairro" }}{% if not tecnico_sel %} · {{ v.tecnico }}{% endif %}</div>
+            <div class="ag-rodape">
+              {% if v.status == 'agendado' %}<span class="badge badge-azul">Agendado</span>
+              {% elif v.status == 'concluido' %}<span class="badge badge-verde">Concluído</span>
+              {% else %}<span class="badge badge-cinza">Cancelado</span>{% endif %}
+              <span class="ag-acoes">
+                {% if v.mapa %}<a class="btn btn-icone" href="{{ v.mapa }}" target="_blank" rel="noopener noreferrer" title="Abrir endereço no mapa"><i class="ph ph-map-pin"></i></a>{% endif %}
+                {% if pode_editar and v.status == 'agendado' %}
+                <button type="button" class="btn btn-icone" title="Marcar como concluída"
+                        data-clique="mudarVisita" data-com-el data-url="{{ url_for('agenda.concluir', id_agenda=v.id) }}"
+                        data-acao="concluir" data-nome="OS #{{ v.id_os }} às {{ v.hora_ini }}"><i class="ph ph-check-circle"></i></button>
+                <button type="button" class="btn btn-icone" title="Cancelar visita"
+                        data-clique="mudarVisita" data-com-el data-url="{{ url_for('agenda.cancelar', id_agenda=v.id) }}"
+                        data-acao="cancelar" data-nome="OS #{{ v.id_os }} às {{ v.hora_ini }}"><i class="ph ph-prohibit"></i></button>
+                {% endif %}
+              </span>
+            </div>
+          </div>
+          {% else %}
+          <div class="ag-vazio">Livre</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# Fila: OS que ainda precisam de dia. "Agendar" já abre o modal com a OS escolhida. #}
+  <div class="card" style="margin-top:16px">
+    <div class="tabela-wrap" data-tabela data-pref-key="agenda_sem_visita" data-titulo="OS sem visita marcada">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="os">OS</th>
+              <th data-col-key="cliente">Cliente</th>
+              <th data-col-key="bairro">Bairro</th>
+              <th data-col-key="tecnico">Técnico</th>
+              <th data-col-key="status">Status</th>
+              <th class="celula-acoes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in sem_agenda %}
+            <tr data-os="{{ o.id }}" data-cliente="{{ o.cliente }}" data-bairro="{{ o.bairro or '' }}"
+                data-tecnico="{{ o.tecnico or '' }}" data-status="{{ o.status }}">
+              <td><a href="{{ url_for('os.detalhe', id_os=o.id) }}">OS #{{ o.id }} · {{ o.patrimonio }}</a></td>
+              <td>{{ o.cliente }}</td>
+              <td>{{ o.bairro or '—' }}{% if o.cidade %} · {{ o.cidade }}{% endif %}</td>
+              <td>{{ o.tecnico or 'Sem técnico' }}</td>
+              <td>{{ o.status | replace('_', ' ') | capitalize }}</td>
+              <td class="celula-acoes">
+                {% if pode_editar %}
+                <button type="button" class="btn btn-icone" title="Agendar esta OS"
+                        data-clique="agendarOS" data-com-el data-os="{{ o.id }}"><i class="ph ph-calendar-plus"></i></button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true"
+                        title="Seu perfil só pode ver a agenda"><i class="ph ph-calendar-plus"></i></button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if not sem_agenda %}
+    <div class="vazio-tabela">
+      <i class="ph ph-calendar-check"></i>
+      <span class="titulo">Toda OS em andamento já tem visita marcada</span>
+      <span class="desc">OS nova entra aqui até ganhar dia e técnico.</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if pode_editar %}
+<div class="modal-overlay" id="modalAgendar">
+  <div class="modal md">
+    <form method="post" action="{{ url_for('agenda.agendar') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="semana" value="{{ seg.isoformat() }}">
+      <input type="hidden" name="filtro_tecnico" value="{{ tecnico_sel or '' }}">
+      <div class="modal-cab">
+        <span class="modal-titulo">Agendar visita</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalAgendar" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <p class="modal-intro">OS sem técnico passa a ser do técnico escolhido. OS que já tem técnico só é agendada para ele.</p>
+        <div class="form-grid">
+          <div class="campo full">
+            <label for="aOs">OS <span class="obrig">*</span></label>
+            <div class="selectbusca" id="sbAOs" data-opcoes='{{ os_opcoes | tojson }}'>
+              <input type="hidden" name="id_os" id="aOsValor" value="">
+              <input class="sb-input" type="text" id="aOs" autocomplete="off" placeholder="Busque por OS, patrimônio, cliente ou bairro">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+          </div>
+          <div class="campo full">
+            <label for="aTec">Técnico <span class="obrig">*</span></label>
+            <div class="selectbusca" id="sbATec" data-opcoes='{{ tecnicos_form | tojson }}'>
+              <input type="hidden" name="id_tecnico" id="aTecValor" value="">
+              <input class="sb-input" type="text" id="aTec" autocomplete="off" placeholder="Escolha o técnico">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="aData">Dia <span class="obrig">*</span></label>
+            <input type="date" id="aData" name="data" min="{{ hoje.isoformat() }}" value="{{ hoje.isoformat() }}" required>
+          </div>
+          <div class="campo">
+            <label for="aHora">Hora <span class="obrig">*</span></label>
+            <input type="time" id="aHora" name="hora" min="06:00" max="21:00" step="900" value="08:00" required>
+          </div>
+          <div class="campo">
+            <label for="aDur">Duração</label>
+            <div class="selectbusca" id="sbADur" data-opcoes='{{ duracoes | tojson }}'>
+              <input type="hidden" name="duracao" value="60">
+              <input class="sb-input" type="text" id="aDur" autocomplete="off" readonly value="1h">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+          </div>
+          <div class="campo full">
+            <label for="aObs">Observações</label>
+            <input type="text" id="aObs" name="observacoes" maxlength="500" placeholder="ex: cliente só atende depois das 9h">
+          </div>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalAgendar">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-calendar-check"></i> Agendar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form id="formVisita" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="semana" value="{{ seg.isoformat() }}">
+  <input type="hidden" name="filtro_tecnico" value="{{ tecnico_sel or '' }}">
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+var OPCOES_OS = {{ os_opcoes | tojson }};
+var OPCOES_TEC = {{ tecnicos_form | tojson }};
+
+function sbDefinir(idSb, valor, rotulo) {
+  var sb = document.getElementById(idSb);
+  sb.querySelector("input[type=hidden]").value = valor;
+  sb.querySelector(".sb-input").value = rotulo;
+}
+
+function tecnicoDaOS(item) {
+  // OS que já tem técnico: o técnico vem escolhido (é o único aceito pelo servidor)
+  if (!item || !item.tecnico) return;
+  var t = OPCOES_TEC.filter(function (x) { return String(x.valor) === String(item.tecnico); })[0];
+  if (t) sbDefinir("sbATec", t.valor, t.rotulo);
+}
+
+function abrirAgendar(dia) {
+  sbDefinir("sbAOs", "", "");
+  sbDefinir("sbATec", "", "");
+  {% if tecnico_sel %}
+  var filtro = OPCOES_TEC.filter(function (x) { return x.valor === {{ tecnico_sel }}; })[0];
+  if (filtro) sbDefinir("sbATec", filtro.valor, filtro.rotulo);
+  {% endif %}
+  if (dia) document.getElementById("aData").value = dia;
+  abrirModal("modalAgendar");
+}
+
+function agendarOS(btn) {
+  abrirAgendar("");
+  var item = OPCOES_OS.filter(function (x) { return String(x.valor) === btn.dataset.os; })[0];
+  if (item) { sbDefinir("sbAOs", item.valor, item.rotulo); tecnicoDaOS(item); }
+}
+
+document.addEventListener("sb:selecionado", function (e) {
+  if (e.target && e.target.id === "sbAOs") tecnicoDaOS(e.detail);
+});
+
+function mudarVisita(btn) {
+  var concluir = btn.dataset.acao === "concluir";
+  var p = concluir
+    ? confirmarPopup("Concluir visita?", "Marcar " + btn.dataset.nome + " como feita?", "Concluir")
+    : confirmarDestrutivo("Cancelar visita?", "Cancelar " + btn.dataset.nome + "? A OS volta para a fila sem visita.", "Cancelar visita");
+  p.then(function (sim) {
+    if (!sim) return;
+    var f = document.getElementById("formVisita");
+    f.action = btn.dataset.url;
+    f.submit();
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

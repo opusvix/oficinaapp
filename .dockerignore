@@ -1,0 +1,21 @@
+# Fora da imagem: segredo, dado local, histórico e ferramenta de desenvolvimento
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+instance/
+static/uploads/
+*.db
+z_Versoes/
+00_GENESIS/
+backups/
+gerar_versao.bat
+iniciar.bat
+.git/
+.gitignore
+.vscode/
+.idea/
+# testes: vão no ZIP de versão, não na imagem (Estrutura_de_Pastas)
+scripts/teste_*.py
+scripts/fumaca_*.py

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sem conexão · {{ empresa }}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/fonts/phosphor/style.css">
+  {# Página guardada pelo service worker: só caminho fixo (sem url_for com versão)
+     e nenhum dado de usuário, porque é a mesma pra todo mundo e fica no cache. #}
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--fundo);
+           color: var(--texto); font-family: var(--font, Inter, system-ui, sans-serif); padding: 16px; box-sizing: border-box; }
+    .caixa { max-width: 380px; text-align: center; background: var(--superficie); border: 1px solid var(--borda);
+             border-radius: var(--raio-lg, 14px); padding: 32px 24px; }
+    .caixa i { font-size: 44px; color: var(--accent); }
+    h1 { font-family: var(--font-titulo, Sora, sans-serif); font-size: 20px; margin: 12px 0 8px; }
+    p { color: var(--texto-secundario); font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
+    button { font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--accent);
+             background: var(--accent); color: var(--branco); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  </style>
+</head>
+<body>
+  <div class="caixa">
+    <i class="ph ph-wifi-slash"></i>
+    <h1>Sem conexão</h1>
+    <p>O {{ empresa }} precisa de internet pra mostrar OS, agenda e caixa. Assim que o sinal voltar, toque em tentar de novo.</p>
+    <button type="button" id="btnTentar"><i class="ph ph-arrow-clockwise"></i> Tentar de novo</button>
+  </div>
+<script nonce="{{ csp_nonce() }}">
+document.getElementById("btnTentar").addEventListener("click", function () { location.reload(); });
+</script>
+</body>
+</html>

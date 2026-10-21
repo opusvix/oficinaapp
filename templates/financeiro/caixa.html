@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block titulo %}Caixa · OficinaApp{% endblock %}
+{% block topo %}Controle de Caixa{% endblock %}
+
+{% block topo_acoes %}
+{% if resumo and pode_editar %}
+<button class="btn btn-secundario btn-sm" type="button" data-clique="abrirMov" data-arg="SUPRIMENTO">
+  <i class="ph ph-arrow-circle-down"></i> Suprimento
+</button>
+<button class="btn btn-secundario btn-sm" type="button" data-clique="abrirMov" data-arg="SANGRIA">
+  <i class="ph ph-arrow-circle-up"></i> Sangria
+</button>
+<button class="btn btn-primary btn-sm" type="button" data-clique="abrirModal" data-arg="modalFechar">
+  <i class="ph ph-lock-key"></i> Fechar caixa
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+
+  {% if not resumo %}
+  {# ── Caixa fechado: abrir com o troco (Padrao_Formulario, .ra-bar 40px) ── #}
+  <div class="card">
+    <div class="card-cab"><span class="card-titulo">Caixa fechado</span></div>
+    <div class="card-corpo">
+      {% if pode_editar %}
+      <form method="post" action="{{ url_for('financeiro.caixa_abrir') }}" class="ra-bar">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="campo">
+          <label for="cxInicial">Troco na gaveta (saldo inicial)</label>
+          <input type="text" id="cxInicial" name="valor" value="0,00" inputmode="decimal" required class="input">
+        </div>
+        <div class="campo ra-acao">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-lock-key-open"></i> Abrir caixa</button>
+        </div>
+      </form>
+      <p class="ajuda-campo">Recebimento em dinheiro só entra com o caixa aberto. Pix, cartão e boleto podem ser baixados com o caixa fechado.</p>
+      {% else %}
+      <p>O caixa está fechado. Abertura é com quem edita o caixa.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  {% set cx = resumo.caixa %}
+  {# ── Caixa aberto ──────────────────────────────────────────────────── #}
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">Caixa aberto</span>
+      <span class="badge badge-verde">desde {{ cx.aberto_em | data_hora }}{% if cx.aberto_por_nome %} · {{ cx.aberto_por_nome }}{% endif %}</span>
+    </div>
+    <div class="card-corpo">
+      <div class="info-grid">
+        <div><span class="rotulo">Troco inicial</span><span class="valor num-dinheiro">{{ cx.saldo_inicial | moeda }}</span></div>
+        <div><span class="rotulo">Dinheiro na gaveta agora</span><span class="valor num-dinheiro" style="font-size:20px;font-weight:800">{{ resumo.gaveta | moeda }}</span></div>
+        <div><span class="rotulo">Recebido neste caixa (todas as formas)</span><span class="valor num-dinheiro">{{ resumo.recebido | moeda }}</span></div>
+        <div><span class="rotulo">Pago neste caixa (todas as formas)</span><span class="valor num-dinheiro">{{ resumo.pago | moeda }}</span></div>
+      </div>
+      <table class="tabela" style="margin-top:14px">
+        <thead><tr><th>Forma</th><th class="col-num">Saldo no caixa (recebido − pago)</th></tr></thead>
+        <tbody>
+          {% for forma, valor in resumo.por_forma.items() %}
+          <tr><td>{{ rotulo_forma[forma] }}</td><td class="col-num num-dinheiro">{{ valor | moeda }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab"><span class="card-titulo">Movimentos deste caixa</span></div>
+    <div class="card-corpo">
+      {% if resumo.movs %}
+      <table class="tabela">
+        <thead><tr><th>Hora</th><th>Tipo</th><th>Forma</th><th>Descrição</th><th>Quem</th><th class="col-num">Valor</th></tr></thead>
+        <tbody>
+          {% for m in resumo.movs %}
+          {% set entra = m.tipo in ('SUPRIMENTO', 'RECEBIMENTO') %}
+          <tr>
+            <td>{{ m.quando | data_hora('%H:%M') }}</td>
+            <td><span class="badge {{ 'badge-verde' if entra else 'badge-ambar' }}">{{ m.tipo | capitalize }}</span></td>
+            <td>{{ rotulo_forma.get(m.forma_pagamento, m.forma_pagamento) }}</td>
+            <td>{{ m.descricao or '—' }}</td>
+            <td>{{ m.usuario_nome or '—' }}</td>
+            <td class="col-num num-dinheiro">{{ ('' if entra else '-') }}{{ m.valor | moeda }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="vazio-tabela" style="padding:24px">
+        <i class="ph ph-cash-register"></i>
+        <span class="titulo">Nenhum movimento ainda</span>
+        <span class="desc">Baixas, suprimentos e sangrias deste caixa aparecem aqui.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab"><span class="card-titulo">Caixas fechados (últimos 30)</span></div>
+    <div class="card-corpo">
+      {% if historico %}
+      <table class="tabela">
+        <thead><tr><th>Aberto</th><th>Fechado</th><th class="col-num">Inicial</th><th class="col-num">Sistema</th><th class="col-num">Contado</th><th class="col-num">Diferença</th></tr></thead>
+        <tbody>
+          {% for h in historico %}
+          <tr>
+            <td>{{ h.aberto_em | data_hora }}{% if h.aberto_por_nome %}<br><small>{{ h.aberto_por_nome }}</small>{% endif %}</td>
+            <td>{{ h.fechado_em | data_hora }}{% if h.fechado_por_nome %}<br><small>{{ h.fechado_por_nome }}</small>{% endif %}</td>
+            <td class="col-num num-dinheiro">{{ h.saldo_inicial | moeda }}</td>
+            <td class="col-num num-dinheiro">{{ h.saldo_calculado | moeda }}</td>
+            <td class="col-num num-dinheiro">{{ h.saldo_informado | moeda }}</td>
+            <td class="col-num num-dinheiro {{ 'texto-vermelho' if (h.diferenca or 0) != 0 else '' }}"{% if h.observacoes %} title="{{ h.observacoes }}"{% endif %}>{{ h.diferenca | moeda }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="ajuda-campo">Nenhum caixa fechado ainda.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if resumo and pode_editar %}
+<div class="modal-overlay" id="modalMov">
+  <div class="modal sm">
+    <form method="post" action="{{ url_for('financeiro.caixa_movimento') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="tipo" id="movTipo" value="">
+      <div class="modal-cab">
+        <span class="modal-titulo" id="movTitulo">Movimento</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalMov" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <p class="modal-intro" id="movAjuda"></p>
+        <div class="campo">
+          <label for="movValor">Valor em dinheiro <span class="obrig">*</span></label>
+          <input type="text" id="movValor" name="valor" inputmode="decimal" required placeholder="0,00">
+        </div>
+        <div class="campo">
+          <label for="movDesc">Motivo <span class="obrig">*</span></label>
+          <input type="text" id="movDesc" name="descricao" maxlength="200" required>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalMov">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Registrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalFechar">
+  <div class="modal sm">
+    <form method="post" action="{{ url_for('financeiro.caixa_fechar') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-cab">
+        <span class="modal-titulo">Fechar caixa</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalFechar" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <p class="modal-intro">Conte o dinheiro da gaveta e informe o total. O sistema compara com o que devia ter e registra a diferença.</p>
+        <div class="campo">
+          <label for="fContado">Dinheiro contado na gaveta <span class="obrig">*</span></label>
+          <input type="text" id="fContado" name="valor" inputmode="decimal" required placeholder="0,00">
+        </div>
+        <div class="campo">
+          <label for="fObs">Observação</label>
+          <input type="text" id="fObs" name="descricao" maxlength="200" placeholder="ex: faltou troco de R$ 2,00">
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalFechar">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-lock-key"></i> Fechar caixa</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if resumo and pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+function abrirMov(tipo) {
+  var supr = tipo === "SUPRIMENTO";
+  document.getElementById("movTipo").value = tipo;
+  document.getElementById("movTitulo").textContent = supr ? "Suprimento (entra dinheiro)" : "Sangria (sai dinheiro)";
+  document.getElementById("movAjuda").textContent = supr
+    ? "Dinheiro que entra na gaveta sem ser venda: troco extra, reforço."
+    : "Dinheiro que sai da gaveta sem ser pagamento de conta: depósito no banco, retirada.";
+  document.getElementById("movValor").value = "";
+  document.getElementById("movDesc").value = "";
+  abrirModal("modalMov");
+}
+</script>
+{% endif %}
+{% endblock %}

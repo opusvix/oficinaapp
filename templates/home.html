@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}Início · OficinaApp{% endblock %}
+{% block topo %}Início{% endblock %}
+
+{% block conteudo %}
+{% set dias = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"] %}
+<div class="container">
+  <div class="inicio-cab">
+    <h2>Olá, {{ current_user.nome.split(' ')[0] }}</h2>
+    <span>{{ dias[p.hoje.weekday()] }}, {{ p.hoje.strftime('%d/%m/%Y') }}</span>
+  </div>
+
+  {% if p.kpis %}
+  {# Painel (Padrao_KPI_Dashboard): cada card é atalho pra listagem filtrada #}
+  <div class="mg-kpis">
+    {% for k in p.kpis %}
+    <a class="mg-kpi {{ k.classe }}" href="{{ k.link }}">
+      <div class="ico"><i class="ph {{ k.icone }}"></i></div>
+      <div class="corpo">
+        <div class="lbl">{{ k.rotulo }}</div>
+        <div class="val">{{ (k.valor | moeda) if k.dinheiro else k.valor }}</div>
+        <div class="disc" title="{{ k.legenda }}">{{ k.legenda }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if p.ve_agenda %}
+  <div class="card">
+    <div class="card-cab">
+      <span class="card-titulo">{{ "Suas visitas de hoje" if p.proprio else "Visitas de hoje" }}</span>
+      <a class="btn btn-secundario btn-sm" href="{{ url_for('agenda.rotas') }}"><i class="ph ph-map-trifold"></i> Rota do dia</a>
+    </div>
+    <div class="card-corpo">
+      {% if p.visitas %}
+      <table class="tabela">
+        <thead><tr><th>Hora</th><th>OS</th><th>Cliente</th><th>Bairro</th>{% if not p.proprio %}<th>Técnico</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for v in p.visitas %}
+          <tr>
+            <td class="num-dinheiro">{{ v.hora }}</td>
+            <td><a href="{{ url_for('os.detalhe', id_os=v.id_os) }}">OS #{{ v.id_os }} · {{ v.patrimonio }}</a></td>
+            <td>{{ v.cliente }}</td>
+            <td>{{ v.bairro or '—' }}</td>
+            {% if not p.proprio %}<td>{{ v.tecnico }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="vazio-tabela" style="padding:24px">
+        <i class="ph ph-calendar-blank"></i>
+        <span class="titulo">Nenhuma visita marcada pra hoje</span>
+        <span class="desc">A agenda da semana mostra o que vem pela frente.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

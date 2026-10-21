@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block titulo %}Nova OS · OficinaApp{% endblock %}
+{% block topo %}Nova Ordem de Serviço{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+  <div class="card">
+    <div class="card-cab"><span class="card-titulo">Abertura de OS</span></div>
+    <div class="card-corpo">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      {% for cat, msg in messages %}
+      <div class="flash {{ cat }}"><i class="ph ph-{{ 'check-circle' if cat=='sucesso' else 'warning-circle' }}"></i> {{ msg }}</div>
+      {% endfor %}
+      {% endif %}
+      {% endwith %}
+
+      <form method="post" id="formNovaOS">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-grid">
+          <div class="campo {{ 'erro' if erros.get('id_cliente') }}">
+            <label for="id_cliente">Cliente <span class="obrig">*</span></label>
+            {# Antes apontava pra api_cidades e mandava o TEXTO digitado como id_cliente:
+               escolher cliente pela tela não funcionava. Agora: busca de cliente + hidden. #}
+            <div class="selectbusca" id="sbCliente" data-src="{{ url_for('clientes.api_busca') }}" data-min-chars="1">
+              <input type="hidden" name="id_cliente" value="{{ valores.get('id_cliente', '') }}">
+              <input class="sb-input" type="text" id="id_cliente"
+                     autocomplete="off" placeholder="Digite nome, fantasia ou CNPJ"
+                     value="{{ cliente_rotulo or '' }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('id_cliente') %}<div class="erro-campo">{{ erros.id_cliente }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('id_equipamento') }}">
+            <label for="id_equipamento">Equipamento</label>
+            <div class="selectbusca" id="sbEquipamento" data-opcoes='{{ equipamentos_opcoes | tojson }}'>
+              <input type="hidden" name="id_equipamento" value="{{ valores.get('id_equipamento', '') }}">
+              <input class="sb-input" type="text" id="id_equipamento" autocomplete="off"
+                     placeholder="Digite o patrimônio ou o modelo" value="{{ equipamento_rotulo or '' }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('id_equipamento') %}<div class="erro-campo">{{ erros.id_equipamento }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('patrimonio') }}">
+            <label for="patrimonio">Patrimônio / Tag</label>
+            <input type="text" id="patrimonio" name="patrimonio" maxlength="50"
+                   value="{{ valores.get('patrimonio', '') }}" placeholder="ex: ESG001">
+            <div style="font-size:11px;color:var(--texto-fraco)">
+              Deixe em branco para gerar ESG{idOS} automaticamente.
+            </div>
+            {% if erros.get('patrimonio') %}<div class="erro-campo">{{ erros.patrimonio }}</div>{% endif %}
+          </div>
+
+          {% if not so_as_proprias %}
+          <div class="campo {{ 'erro' if erros.get('id_tecnico') }}">
+            <label for="id_tecnico">Técnico responsável</label>
+            <div class="selectbusca" id="sbTecnico" data-opcoes='{{ tecnicos_opcoes | tojson }}'>
+              <input type="hidden" name="id_tecnico" value="{{ valores.get('id_tecnico', '') }}">
+              <input class="sb-input" type="text" id="id_tecnico" autocomplete="off"
+                     placeholder="Atribuir técnico" value="{{ tecnico_rotulo or '' }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('id_tecnico') %}<div class="erro-campo">{{ erros.id_tecnico }}</div>{% endif %}
+          </div>
+          {% endif %}{# técnico: a OS sempre fica com quem abre (os.nova força) #}
+
+          <div class="campo full {{ 'erro' if erros.get('descricao_inicial') }}">
+            <label for="descricao_inicial">Descrição do problema <span class="obrig">*</span></label>
+            <textarea id="descricao_inicial" name="descricao_inicial" rows="4"
+                      placeholder="ex: Não gela depois de 30 min ligado.">{{ valores.get('descricao_inicial', '') }}</textarea>
+            {% if erros.get('descricao_inicial') %}<div class="erro-campo">{{ erros.descricao_inicial }}</div>{% endif %}
+          </div>
+
+          {# Sem campo "Valor do orçamento": o orçamento é a SOMA DOS ITENS lançados
+             na OS (peças e mão de obra), calculada pelo servidor. #}
+
+          <div class="campo {{ 'erro' if erros.get('custo_deslocamento') }}">
+            <label for="custo_deslocamento">Custo de deslocamento</label>
+            <input type="text" id="custo_deslocamento" name="custo_deslocamento" maxlength="12"
+                   value="{{ valores.get('custo_deslocamento', '0') }}" placeholder="0,00">
+            {% if erros.get('custo_deslocamento') %}<div class="erro-campo">{{ erros.custo_deslocamento }}</div>{% endif %}
+          </div>
+
+          <div class="campo {{ 'erro' if erros.get('status') }}">
+            <label for="status">Status inicial</label>
+            <div class="selectbusca" id="sbStatus"
+                 data-opcoes='[{"valor": "aberta", "rotulo": "Aberta"}, {"valor": "avaliacao", "rotulo": "Avaliação"}]'>
+              <input type="hidden" name="status" value="{{ valores.get('status') or 'aberta' }}">
+              <input class="sb-input" type="text" id="status" autocomplete="off" readonly
+                     value="{{ 'Avaliação' if valores.get('status') == 'avaliacao' else 'Aberta' }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            {% if erros.get('status') %}<div class="erro-campo">{{ erros.status }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="modal-rodape" style="padding-top:16px;border-top:1px solid var(--borda)">
+          <a class="btn btn-secundario" href="{{ url_for('os.listar') }}">Cancelar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Abrir OS</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

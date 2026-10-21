@@ -1,0 +1,352 @@
+/* layout.css - Sidebar, topbar, grid, containers */
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Sidebar
+   ────────────────────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--superficie);
+  border-right: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 40;
+  transition: transform var(--transicao);
+  overflow: hidden;
+}
+
+/* Handle de redimensionamento */
+.sidebar-resize {
+  position: absolute;
+  top: 0; right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 41;
+  background: transparent;
+  transition: background .12s ease;
+}
+.sidebar-resize:hover,
+.sidebar-resize.arrastando {
+  background: var(--accent);
+  opacity: .35;
+}
+body.sidebar-arrastando { user-select: none; cursor: col-resize !important; }
+body.sidebar-arrastando .sidebar,
+body.sidebar-arrastando .conteudo,
+body.sidebar-arrastando .topbar { transition: none !important; }
+
+/* Marca (logo + nome) */
+.sidebar-marca {
+  padding: 22px 20px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--borda);
+  flex-shrink: 0;
+}
+.sidebar-marca .logo-quadro {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--branco);
+  border: 2px solid var(--accent);
+  display: grid; place-items: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sidebar-marca .logo-quadro i { font-size: 22px; }
+.sidebar-marca .logo-quadro img { width: 100%; height: 100%; object-fit: cover; }
+.sidebar-marca .marca-nome {
+  font-family: var(--font-titulo);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+.sidebar-marca .marca-sub {
+  font-size: 11px;
+  color: var(--texto-fraco);
+  font-weight: 500;
+}
+
+/* Navegação */
+.sidebar-nav { flex: 1; padding: 14px 12px; overflow-y: auto; }
+
+/* Grupo (1º nível) */
+.sidebar-nav .grupo { margin-bottom: 2px; }
+.sidebar-nav .grupo-cab {
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 10px 4px;
+  text-align: left;
+  border-radius: var(--raio-sm);
+  transition: background var(--transicao);
+}
+.sidebar-nav .grupo-cab:hover { background: var(--fundo); }
+.sidebar-nav .grupo-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--texto-fraco);
+  flex: 1;
+}
+.sidebar-nav .grupo-chevron {
+  color: var(--texto-fraco);
+  font-size: 12px;
+  transition: transform .22s ease;
+  flex-shrink: 0;
+  opacity: .7;
+}
+.sidebar-nav .grupo.aberto .grupo-chevron { transform: rotate(90deg); }
+.sidebar-nav .grupo-corpo {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .25s ease;
+}
+.sidebar-nav .grupo.aberto .grupo-corpo { grid-template-rows: 1fr; }
+.sidebar-nav .grupo-corpo > .corpo-interno { overflow: hidden; min-height: 0; }
+
+/* Sub-grupo (2º nível) */
+.sidebar-nav .sub-grupo { margin: 0; }
+.sidebar-nav .sub-grupo-cab {
+  box-sizing: border-box;
+  width: 100%; margin: 0;
+  background: transparent; border: none;
+  -webkit-appearance: none; appearance: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px 5px 14px;
+  font: inherit; text-align: left;
+  border-radius: var(--raio-sm);
+  transition: background var(--transicao), color var(--transicao);
+}
+.sidebar-nav .sub-grupo-cab:hover { background: var(--fundo); }
+.sidebar-nav .sub-grupo-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--texto-secundario); flex: 1;
+}
+.sidebar-nav .sub-grupo-chevron {
+  color: var(--texto-fraco); font-size: 11px; opacity: .55;
+  transition: transform .22s ease; flex-shrink: 0;
+}
+.sidebar-nav .sub-grupo.aberto .sub-grupo-chevron { transform: rotate(90deg); }
+.sidebar-nav .sub-grupo-corpo {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .22s ease;
+}
+.sidebar-nav .sub-grupo.aberto .sub-grupo-corpo { grid-template-rows: 1fr; }
+.sidebar-nav .sub-grupo-corpo > .corpo-interno {
+  overflow: hidden; min-height: 0;
+  margin-left: 18px; padding-left: 10px;
+  border-left: 1px solid var(--borda);
+}
+.sidebar-nav .grupo-corpo > .corpo-interno > .nav-item { margin-left: 8px; }
+
+/* Item (link real) */
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 9px; border-radius: var(--raio-sm);
+  /* --texto-suave não existia em tokens.css: a declaração morria e o link
+     herdava a cor do pai (funcionava por acidente) */
+  color: var(--texto); font-weight: 500; font-size: 13px;
+  text-decoration: none;
+}
+.nav-item i { font-size: 16px; opacity: .85; }
+.nav-item:hover { background: var(--fundo); color: var(--texto); }
+.nav-item.ativo {
+  background: var(--accent-suave);
+  /* texto, não o azul sólido: no dark #1E6FD0 sobre #1A3A5C dava 2,4:1 */
+  color: var(--accent-texto-escuro);
+  font-weight: 600;
+}
+.nav-item.ativo i { opacity: 1; }
+.nav-item.esmaecido {
+  color: var(--texto-fraco); cursor: not-allowed; opacity: .65;
+}
+
+/* Item cuja rota ainda não existe: aparece, mas não navega (acende sozinho
+   quando a fase daquela rota entregar — vê modules/admin.py e core/menu.py) */
+.nav-item-off {
+  color: var(--texto-fraco); cursor: default;
+  justify-content: space-between;
+}
+.nav-item-off:hover { background: transparent; color: var(--texto-fraco); }
+.nav-item-off .nav-em-breve {
+  font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--texto-fraco);
+  background: var(--superficie-alt); border: 1px solid var(--borda);
+  border-radius: var(--raio-full); padding: 1px 6px; white-space: nowrap;
+}
+
+/* Perfil sem nenhum módulo liberado */
+.menu-vazio {
+  padding: 10px 9px; margin: 0;
+  font-size: var(--fs-xs); line-height: 1.6; color: var(--texto-fraco);
+}
+
+/* Rodapé da sidebar */
+.sidebar-rodape {
+  padding: 12px;
+  border-top: 1px solid var(--borda);
+  flex-shrink: 0;
+}
+.btn-home-side {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; margin-bottom: 8px;
+  border-radius: var(--raio-sm);
+  background: linear-gradient(135deg, var(--accent-solido), var(--accent-solido-fim));
+  /* --accent-texto (branco no claro / azul-marinho no escuro): #fixo branco
+     sobre #4A9EFF do dark dava 2,75:1 */
+  color: var(--accent-texto); text-decoration: none;
+  font-weight: 600; font-size: 13px;
+  transition: transform var(--transicao), box-shadow var(--transicao);
+  box-shadow: 0 2px 8px var(--accent-sombra);
+}
+.btn-home-side:hover {
+  color: var(--accent-texto); text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-sombra);
+}
+.btn-home-side.ativo {
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.4),
+              0 2px 8px var(--accent-sombra);
+}
+.btn-home-side i { font-size: 17px; flex-shrink: 0; }
+
+.usuario-box {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--raio-sm);
+}
+.avatar {
+  width: 34px; height: 34px; border-radius: var(--raio-full);
+  background: linear-gradient(135deg, var(--accent-solido), var(--accent-solido-fim));
+  /* mesma lógica do botão Início: branco no tema claro, marinho no escuro */
+  color: var(--accent-texto); display: grid; place-items: center;
+  font-weight: 700; font-size: 13px; font-family: var(--font-titulo);
+  flex-shrink: 0;
+}
+.usuario-box .info { min-width: 0; flex: 1; }
+.usuario-box .info .nome {
+  font-weight: 600; font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.usuario-box .info .papel { font-size: 11px; color: var(--texto-fraco); }
+
+.btn-fantasma {
+  background: transparent; border: 1px solid transparent;
+  color: var(--texto-secundario);
+  border-radius: var(--raio-sm); padding: 6px 10px;
+  font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-fantasma:hover { background: var(--fundo); color: var(--texto); }
+.btn-fantasma i { font-size: 16px; }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Topbar
+   ────────────────────────────────────────────────────────────────────────────── */
+
+.topbar {
+  position: fixed; top: 0; left: var(--sidebar-width); right: 0;
+  height: var(--topbar-height);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  display: flex; align-items: center;
+  padding: 0 24px; z-index: 30;
+  transition: left var(--transicao);
+}
+.tb-titulo { flex: 1; }
+.titulo-pagina {
+  font-family: var(--font-titulo);
+  font-weight: 700; font-size: 18px;
+  letter-spacing: -.02em; color: var(--texto);
+  white-space: nowrap;   /* título não quebra em 2 linhas quando a topbar tem botões */
+}
+.tb-acoes {
+  display: flex; align-items: center; gap: 12px;
+  margin-left: auto;
+}
+.tb-acoes .usuario-box { margin-left: 16px; }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Área de conteúdo principal
+   ────────────────────────────────────────────────────────────────────────────── */
+
+.conteudo {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--topbar-height);
+  padding: 24px;
+  min-height: calc(100vh - var(--topbar-height));
+  transition: margin-left var(--transicao);
+  background: var(--fundo);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Grid / Container
+   ────────────────────────────────────────────────────────────────────────────── */
+
+.container { max-width: 1400px; margin: 0 auto; }
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Mobile: sidebar colapsável
+   ────────────────────────────────────────────────────────────────────────────── */
+
+/* Botão de menu: só existe em tela estreita (em desktop a sidebar está aberta).
+   Seletores `.btn.menu-btn` (0,2,0) porque components.css carrega DEPOIS de
+   layout.css e `.btn{display:inline-flex}` venceria um `.menu-btn` simples —
+   achado na conferência visual: hambúrguer aparecendo em tela de 1300px. */
+.btn.menu-btn { display: none; }
+
+@media (max-width: 880px) {
+  .btn.menu-btn { display: inline-flex; margin-right: 6px; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.aberta { transform: translateX(0); }
+  .topbar { left: 0; padding-left: 12px; }
+  /* Título longo corta com reticências e a caixa do usuário vira só o avatar:
+     senão topbar (hambúrguer + ações + sino + tema + nome) estoura em 360px */
+  .tb-titulo { overflow: hidden; }
+  .titulo-pagina { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tb-acoes { gap: 6px; }
+  .tb-acoes .usuario-box { margin-left: 4px; gap: 4px; padding: 8px 4px; }
+  .usuario-box .info { display: none; }
+  .conteudo { margin-left: 0; }
+  .sidebar-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    z-index: 35; display: none;
+  }
+  .sidebar-overlay.visivel { display: block; }
+  /* Reserva de espaço do handle: não faz sentido arrastar em celular */
+  .sidebar-resize { display: none; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Flash messages
+   ────────────────────────────────────────────────────────────────────────────── */
+
+.flash-container { position: fixed; top: 80px; right: 20px; z-index: 100; }
+.flash {
+  padding: 12px 16px; border-radius: 8px; font-size: 13px;
+  box-shadow: var(--sombra); animation: slideIn .3s ease;
+}
+.flash.erro { background: var(--vermelho-suave); color: var(--vermelho-escuro); }
+.flash.sucesso { background: var(--verde-suave); color: var(--verde-escuro); }
+.flash.aviso { background: var(--ambar-suave); color: var(--ambar-escuro); }
+.flash.info { background: var(--azul-suave); color: var(--azul-escuro); }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+/* ── Página pública (link do cliente): sem sidebar, coluna central ─────────── */
+.conteudo-publico { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+.publico-titulo { font-family: var(--font-titulo); font-size: 22px; margin: 0 0 16px; }

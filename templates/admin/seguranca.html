@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block titulo %}Segurança · OficinaApp{% endblock %}
+{% block topo %}Segurança{% endblock %}
+
+{% block conteudo %}
+<div class="container">
+  <div class="card" style="max-width:720px">
+    <div class="card-cab">
+      <span class="card-titulo">Parâmetros de acesso</span>
+      <span class="badge badge-azul"><i class="ph ph-lock-key"></i> valem no próximo acesso</span>
+    </div>
+    <div class="card-corpo">
+      {# Tela de configuração de risco: o texto curto por campo é parte do consentimento
+         (Tela_Nao_Tem_Manual, exceção). Nada de manual no topo. #}
+      <form method="post" action="{{ url_for('admin.seguranca_salvar') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <fieldset {{ 'disabled' if not pode_editar }} style="border:0;padding:0;margin:0">
+        <div class="form-grid">
+          <div class="campo {{ 'erro' if erros.get('session_timeout_min') }}">
+            <label for="sTimeout">Tempo até exigir login de novo (min)</label>
+            <input type="number" id="sTimeout" name="session_timeout_min" min="0" max="1440"
+                   value="{{ valores.session_timeout_min }}" required>
+            <span class="ajuda-campo">Minutos sem uso até a sessão cair. <strong>0 desliga</strong> (a sessão não expira por inatividade).</span>
+            {% if erros.get('session_timeout_min') %}<div class="erro-campo">{{ erros.session_timeout_min }}</div>{% endif %}
+          </div>
+          <div class="campo">
+            <label for="sModo">Controle de IP</label>
+            <div class="selectbusca" id="sbModo" data-opcoes='{{ modos | tojson }}'>
+              <input type="hidden" name="ip_protecao_modo" id="sModoValor" value="{{ valores.ip_protecao_modo }}">
+              <input class="sb-input" type="text" id="sModo" autocomplete="off" readonly
+                     value="{{ (modos | selectattr('valor', 'equalto', valores.ip_protecao_modo) | first).rotulo if (modos | selectattr('valor', 'equalto', valores.ip_protecao_modo) | first) else 'Desligado' }}">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+            <span class="ajuda-campo">Off: não filtra. Só registra: anota quem bateu. Barra: recusa a blocklist. O link do cliente nunca é filtrado.</span>
+          </div>
+          <div class="campo {{ 'erro' if erros.get('max_login_tentativas') }}">
+            <label for="sTent">Falhas de login antes de bloquear</label>
+            <input type="number" id="sTent" name="max_login_tentativas" min="1" max="50"
+                   value="{{ valores.max_login_tentativas }}" required>
+            <span class="ajuda-campo">Contadas por e-mail <strong>ou</strong> por IP. Acima disso, o login trava.</span>
+            {% if erros.get('max_login_tentativas') %}<div class="erro-campo">{{ erros.max_login_tentativas }}</div>{% endif %}
+          </div>
+          <div class="campo {{ 'erro' if erros.get('lockout_janela_min') }}">
+            <label for="sJanela">Janela do bloqueio (min)</label>
+            <input type="number" id="sJanela" name="lockout_janela_min" min="1" max="1440"
+                   value="{{ valores.lockout_janela_min }}" required>
+            <span class="ajuda-campo">Por quantos minutos as falhas são contadas e o bloqueio dura.</span>
+            {% if erros.get('lockout_janela_min') %}<div class="erro-campo">{{ erros.lockout_janela_min }}</div>{% endif %}
+          </div>
+        </div>
+        {% if pode_editar %}
+        <div class="form-acoes">
+          <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Salvar</button>
+        </div>
+        {% else %}
+        <p class="ajuda-campo" style="margin-top:12px">Seu perfil só pode ver estes parâmetros.</p>
+        {% endif %}
+        </fieldset>
+      </form>
+    </div>
+  </div>
+
+  <div class="card" style="max-width:720px;margin-top:16px">
+    <div class="card-cab"><span class="card-titulo">O que não muda aqui</span></div>
+    <div class="card-corpo">
+      <p class="ajuda-campo" style="line-height:1.6">
+        A chave de sessão (SECRET_KEY), os cabeçalhos e o CSRF ficam no código e no ambiente, não nesta tela:
+        são proteções que não se desligam em operação. A troca de senha no primeiro acesso é sempre obrigatória.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener("sb:selecionado", function (e) {
+  if (e.target && e.target.id === "sbModo") document.getElementById("sModoValor").value = e.detail.valor;
+});
+</script>
+{% endblock %}

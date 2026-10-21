@@ -1,0 +1,11 @@
+# Padroniza quebras de linha: LF no repositório, convertendo conforme a plataforma.
+* text=auto eol=lf
+
+# Scripts do Windows precisam de CRLF pra rodar com dois cliques.
+*.bat text eol=crlf
+
+# Binários: o git não mexe.
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <title>{{ codigo }} · OficinaApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/phosphor/style.css') }}">
+</head>
+<body>
+<main class="tela-auth">
+    <div class="card card-auth" style="text-align:center">
+        <div class="auth-marca" style="justify-content:center">
+            <div class="logo-quadro"><i class="ph ph-wrench"></i></div>
+        </div>
+
+        <div class="estado-vazio" style="padding:8px 0 4px">
+            <i class="ph {{ icone }}"></i>
+        </div>
+
+        <h1 class="auth-titulo" style="border:0;padding-bottom:0;margin-bottom:8px">
+            {{ titulo }}
+        </h1>
+
+        <p style="font-size:var(--fs-sm);color:var(--texto-secundario);margin-bottom:22px">
+            {{ mensagem }}
+        </p>
+
+        <a class="btn btn-primary btn-lg w-full" href="{{ destino }}">
+            <i class="ph ph-arrow-left"></i> Voltar para o início
+        </a>
+    </div>
+</main>
+</body>
+</html>

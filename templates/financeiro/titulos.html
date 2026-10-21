@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block titulo %}{{ "Contas a Receber" if tipo == 'RECEBER' else "Contas a Pagar" }} · OficinaApp{% endblock %}
+{% block topo %}{{ "Contas a Receber" if tipo == 'RECEBER' else "Contas a Pagar" }}{% endblock %}
+
+{% block topo_acoes %}
+{% if pode_editar %}
+<button class="btn btn-primary btn-sm" type="button" data-clique="novoTitulo">
+  <i class="ph ph-plus"></i> {{ "Nova conta a receber" if tipo == 'RECEBER' else "Nova conta a pagar" }}
+</button>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+{% from "_periodo.html" import periodo %}
+{% set receber = tipo == 'RECEBER' %}
+<div class="container">
+
+  {# Listagem operacional: direto pra filtro e tabela, sem KPI (Listagens_sem_KPI) #}
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-corpo">
+      <form method="get" class="fu-bar">
+        <div class="g largo">
+          <span class="fu-lbl">Situação</span>
+          <div class="selectbusca" id="fuStatus" data-opcoes='{{ status_opcoes | tojson }}'>
+            <input type="hidden" name="status" value="{{ status_sel }}">
+            <input class="sb-input" type="text" autocomplete="off" readonly value="{{ status_rotulo }}" aria-label="Situação">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        {{ periodo(rotulo="Vencimento", opcoes=periodos, sel=periodo_sel, de=periodo_de, ate=periodo_ate) }}
+        <div class="acoes-filtros">
+          <a href="{{ url_for('financeiro.receber' if receber else 'financeiro.pagar', status='', periodo='todos') }}" class="btn btn-secundario">Limpar</a>
+          <button type="submit" class="btn btn-primary"><i class="ph ph-magnifying-glass"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabela-wrap" data-tabela data-pref-key="{{ 'fin_receber' if receber else 'fin_pagar' }}"
+         data-titulo="{{ 'Contas a Receber' if receber else 'Contas a Pagar' }}">
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th data-col-key="vencimento">Vencimento</th>
+              <th data-col-key="descricao">Descrição</th>
+              <th data-col-key="pessoa">{{ "Cliente" if receber else "Fornecedor" }}</th>
+              <th data-col-key="parcela" class="col-num">Parcela</th>
+              <th data-col-key="valor" class="col-num">Valor</th>
+              <th data-col-key="situacao">Situação</th>
+              <th data-col-key="pagamento">Pagamento</th>
+              <th class="celula-acoes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in titulos %}
+            {% set aberto = t.status == 'aberto' %}
+            <tr data-vencimento="{{ t.data_vencimento }}" data-descricao="{{ t.descricao }}"
+                data-pessoa="{{ t.cliente or t.fornecedor or '' }}" data-parcela="{{ t.parcela }}"
+                data-valor="{{ t.valor }}" data-situacao="{{ t.status }}" data-pagamento="{{ t.data_pagamento or '' }}"
+                data-busca="{{ t.descricao }} {{ t.cliente or '' }} {{ t.fornecedor or '' }}">
+              <td class="{{ 'texto-vermelho' if t.vencido else '' }}">{{ t.data_vencimento | dia }}</td>
+              <td>{{ t.descricao }}{% if t.id_os %} <a href="{{ url_for('os.detalhe', id_os=t.id_os) }}" class="badge badge-accent">OS #{{ t.id_os }}</a>{% endif %}</td>
+              <td>{{ t.cliente or t.fornecedor or '—' }}</td>
+              <td class="col-num">{{ t.parcela }}/{{ t.total_parcelas }}</td>
+              <td class="col-num num-dinheiro">{{ t.valor | moeda }}</td>
+              <td>
+                {% if t.vencido %}<span class="badge badge-vermelho">Vencido</span>
+                {% elif t.status == 'pago' %}<span class="badge badge-verde">{{ "Recebido" if receber else "Pago" }}</span>
+                {% elif t.status == 'aberto' %}<span class="badge badge-ambar">Em aberto</span>
+                {% else %}<span class="badge badge-cinza">{{ t.status | capitalize }}</span>{% endif %}
+              </td>
+              <td>{% if t.data_pagamento %}{{ t.data_pagamento | dia }} · {{ rotulo_forma.get(t.forma_pagamento, t.forma_pagamento) }}{% else %}—{% endif %}</td>
+              <td class="celula-acoes">
+                {# Slots FIXOS (Padrao_Tabela): quem não pode vê o ícone esmaecido com o motivo #}
+                {% set motivo = "Seu perfil só pode ver" if not pode_editar else ("Título " ~ t.status ~ ": só título em aberto") %}
+                {% if pode_editar and aberto %}
+                <button type="button" class="btn btn-icone" title="{{ 'Receber' if receber else 'Pagar' }} (dar baixa)"
+                        data-clique="abrirBaixa" data-com-el data-url="{{ url_for('financeiro.titulo_baixar', id_titulo=t.id) }}"
+                        data-nome="{{ t.descricao }}" data-valor="{{ t.valor | moeda }}">
+                  <i class="ph ph-check-circle"></i>
+                </button>
+                <button type="button" class="btn btn-icone" title="Parcelar"
+                        data-clique="abrirParcelar" data-com-el data-url="{{ url_for('financeiro.titulo_parcelar', id_titulo=t.id) }}"
+                        data-nome="{{ t.descricao }}" data-valor="{{ t.valor | moeda }}">
+                  <i class="ph ph-arrows-split"></i>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true" title="{{ motivo }} recebe baixa">
+                  <i class="ph ph-check-circle"></i>
+                </button>
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true" title="{{ motivo }} pode ser parcelado">
+                  <i class="ph ph-arrows-split"></i>
+                </button>
+                {% endif %}
+                {% if receber %}
+                {% if t.status == 'pago' %}
+                <a class="btn btn-icone" title="Recibo / PDF" target="_blank" rel="noopener"
+                   href="{{ url_for('financeiro.recibo', id_titulo=t.id) }}"><i class="ph ph-receipt"></i></a>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true" title="Recibo só depois de recebido">
+                  <i class="ph ph-receipt"></i>
+                </button>
+                {% endif %}
+                {% endif %}
+                {% if pode_editar and aberto %}
+                <button type="button" class="btn btn-icone" title="Cancelar título"
+                        data-clique="cancelarTitulo" data-com-el data-url="{{ url_for('financeiro.titulo_cancelar', id_titulo=t.id) }}"
+                        data-nome="{{ t.descricao }}">
+                  <i class="ph ph-prohibit"></i>
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-icone desabilitado" aria-disabled="true" title="{{ motivo }} pode ser cancelado">
+                  <i class="ph ph-prohibit"></i>
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if not titulos %}
+    <div class="vazio-tabela">
+      <i class="ph ph-coins"></i>
+      <span class="titulo">Nenhuma conta {{ "a receber" if receber else "a pagar" }} neste filtro</span>
+      <span class="desc">{% if receber %}OS entregue gera a conta a receber sozinha. Lance aqui o que não vem de OS.{% else %}Lance aluguel, fornecedor, peças compradas e outras despesas.{% endif %}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if pode_editar %}
+{# ── Nova conta (.modal-md) ─────────────────────────────────────────── #}
+<div class="modal-overlay" id="modalTitulo">
+  <div class="modal md">
+    <form method="post" action="{{ url_for('financeiro.titulo_novo') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="tipo" value="{{ tipo }}">
+      <div class="modal-cab">
+        <span class="modal-titulo">{{ "Nova conta a receber" if receber else "Nova conta a pagar" }}</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalTitulo" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <div class="form-grid">
+          <div class="campo full">
+            <label for="tDescricao">Descrição <span class="obrig">*</span></label>
+            <input type="text" id="tDescricao" name="descricao" maxlength="200" required
+                   placeholder="{{ 'ex: Manutenção preventiva do forno' if receber else 'ex: Aluguel da oficina' }}">
+          </div>
+          {% if receber %}
+          <div class="campo full">
+            <label for="tCliente">Cliente</label>
+            <div class="selectbusca" id="sbTCliente" data-src="{{ url_for('clientes.api_busca') }}">
+              <input type="hidden" name="id_cliente" value="">
+              <input class="sb-input" type="text" id="tCliente" autocomplete="off" placeholder="Digite nome, fantasia ou CNPJ">
+              <i class="ph ph-caret-down sb-seta"></i>
+              <div class="sb-lista"></div>
+            </div>
+          </div>
+          {% else %}
+          <div class="campo full">
+            <label for="tFornecedor">Fornecedor</label>
+            <input type="text" id="tFornecedor" name="fornecedor" maxlength="200" placeholder="ex: Distribuidora de Peças Sul">
+          </div>
+          {% endif %}
+          <div class="campo">
+            <label for="tValor">Valor total <span class="obrig">*</span></label>
+            <input type="text" id="tValor" name="valor" maxlength="14" required inputmode="decimal" placeholder="0,00">
+          </div>
+          <div class="campo">
+            <label for="tVenc">Vencimento <span class="obrig">*</span></label>
+            <input type="date" id="tVenc" name="data_vencimento" required value="{{ hoje }}">
+          </div>
+          <div class="campo">
+            <label for="tParcelas">Parcelas</label>
+            <input type="number" id="tParcelas" name="parcelas" min="1" max="24" value="1">
+            <span class="ajuda-campo">Mensais, a partir do vencimento. O valor é dividido e a última acerta os centavos.</span>
+          </div>
+          <div class="campo full">
+            <label for="tObs">Observações</label>
+            <input type="text" id="tObs" name="observacoes" maxlength="1000">
+          </div>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalTitulo">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-check"></i> Lançar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Baixa (.modal-sm) ──────────────────────────────────────────────── #}
+<div class="modal-overlay" id="modalBaixa">
+  <div class="modal sm">
+    <form method="post" action="" id="formBaixa">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-cab">
+        <span class="modal-titulo">{{ "Receber" if receber else "Pagar" }}</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalBaixa" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <p id="baixaResumo" style="margin-top:0"></p>
+        <div class="campo">
+          <label for="bForma">Forma de pagamento <span class="obrig">*</span></label>
+          <div class="selectbusca" id="sbForma" data-opcoes='{{ formas | tojson }}'>
+            <input type="hidden" name="forma_pagamento" id="bFormaValor" value="">
+            <input class="sb-input" type="text" id="bForma" autocomplete="off" readonly placeholder="Escolha">
+            <i class="ph ph-caret-down sb-seta"></i>
+            <div class="sb-lista"></div>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="bData">Data do pagamento <span class="obrig">*</span></label>
+          <input type="date" id="bData" name="data_pagamento" value="{{ hoje }}" max="{{ hoje }}" required>
+        </div>
+        {% if not caixa %}
+        <p class="ajuda-campo" style="margin:8px 0 0"><i class="ph ph-info"></i>
+          O caixa está fechado: baixa em dinheiro pede o caixa aberto. Pix, cartão e boleto passam.</p>
+        {% endif %}
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalBaixa">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="baixaConfirmar" disabled><i class="ph ph-check-circle"></i> Confirmar baixa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Parcelar (.modal-sm) ───────────────────────────────────────────── #}
+<div class="modal-overlay" id="modalParcelar">
+  <div class="modal sm">
+    <form method="post" action="" id="formParcelar">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-cab">
+        <span class="modal-titulo">Parcelar</span>
+        <button type="button" class="modal-fechar" data-clique="fecharModal" data-arg="modalParcelar" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-corpo">
+        <p id="parcelarResumo" style="margin-top:0"></p>
+        <div class="campo">
+          <label for="pN">Em quantas vezes <span class="obrig">*</span></label>
+          <input type="number" id="pN" name="parcelas" min="2" max="24" value="2" required>
+          <span class="ajuda-campo">Mensais a partir do vencimento atual. O título original fica como "parcelado".</span>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-secundario" data-clique="fecharModal" data-arg="modalParcelar">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-arrows-split"></i> Parcelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form id="formCancelarTitulo" method="post" action="" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tabela-avancada.js') }}"></script>
+{% if pode_editar %}
+<script nonce="{{ csp_nonce() }}">
+function novoTitulo() { abrirModal("modalTitulo"); }
+
+function abrirBaixa(btn) {
+  var f = document.getElementById("formBaixa");
+  f.action = btn.dataset.url;
+  document.getElementById("baixaResumo").textContent = btn.dataset.nome + " · " + btn.dataset.valor;
+  document.getElementById("bFormaValor").value = "";
+  document.getElementById("bForma").value = "";
+  document.getElementById("baixaConfirmar").disabled = true;
+  abrirModal("modalBaixa");
+}
+// Confirmar só libera com a forma escolhida (o servidor confere de novo)
+document.addEventListener("sb:selecionado", function (e) {
+  if (e.target && e.target.id === "sbForma") document.getElementById("baixaConfirmar").disabled = false;
+});
+
+function abrirParcelar(btn) {
+  document.getElementById("formParcelar").action = btn.dataset.url;
+  document.getElementById("parcelarResumo").textContent = btn.dataset.nome + " · " + btn.dataset.valor;
+  abrirModal("modalParcelar");
+}
+
+function cancelarTitulo(btn) {
+  confirmarDestrutivo(
+    "Cancelar título?",
+    "Cancelar “" + btn.dataset.nome + "”? Ele sai da lista em aberto, mas o registro fica guardado.",
+    "Cancelar título"
+  ).then(function (sim) {
+    if (!sim) return;
+    var f = document.getElementById("formCancelarTitulo");
+    f.action = btn.dataset.url;
+    f.submit();
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

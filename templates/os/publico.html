@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block titulo %}OS #{{ os.id }} · {{ "Entrega" if (aguarda_entrega or os.status == 'entregue') else "Aprovação" }}{% endblock %}
+
+{% block conteudo_publico %}
+<div class="container">
+  <h1 class="publico-titulo">Ordem de Serviço #{{ os.id }}</h1>
+
+  <div class="card">
+    <div class="card-cab"><span class="card-titulo">{% if os.status == 'entregue' %}Entrega confirmada{% elif aguarda_entrega %}Conferir e confirmar a entrega{% else %}Aprovação de Orçamento{% endif %}</span></div>
+    <div class="card-corpo">
+      <p><strong>Cliente:</strong> {{ os.cliente }}</p>
+      <p><strong>Patrimônio:</strong> {{ os.patrimonio }}</p>
+      <p><strong>Problema relatado:</strong></p>
+      <p style="white-space:pre-wrap">{{ os.descricao_inicial or '—' }}</p>
+
+      {% if itens %}
+      <p><strong>Itens:</strong></p>
+      <table class="tabela" style="margin-top:8px">
+        <thead>
+          <tr>
+            <th>Descrição</th><th class="col-num">Qtd</th><th class="col-num">Unitário</th><th class="col-num">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in itens %}
+          <tr>
+            <td>{{ i.descricao }}</td>
+            <td class="col-num">{{ i.quantidade }}</td>
+            <td class="col-num">{{ (i.preco_unitario or 0) | moeda }}</td>
+            <td class="col-num">{{ (i.subtotal or 0) | moeda }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {# Orçamento = soma dos itens acima (calculado no servidor); deslocamento à parte #}
+      <table class="tabela" style="margin-top:12px">
+        <tbody>
+          <tr><td>Orçamento (soma dos itens)</td><td class="col-num">{{ (os.orcamento_valor or 0) | moeda }}</td></tr>
+          <tr><td>Deslocamento</td><td class="col-num">{{ (os.custo_deslocamento or 0) | moeda }}</td></tr>
+          <tr><td><strong>Total se aprovar</strong></td>
+              <td class="col-num"><strong>{{ ((os.orcamento_valor or 0) + (os.custo_deslocamento or 0)) | moeda }}</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px"><strong>Situação do orçamento:</strong>
+      <span class="badge badge-{% if os.orcamento_status == 'aprovado' %}verde{% elif os.orcamento_status == 'recusado' %}vermelho{% else %}ambar{% endif %}">
+        {{ os.orcamento_status }}
+      </span></p>
+
+      {% if os.orcamento_status == 'pendente' %}
+      <form method="post" style="margin-top:16px">
+        {# sem este input o CSRF do POST público falha e o cliente não consegue
+           aprovar/recusar (a fumaca passava porque injetava o token na mão) #}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" name="decisao" value="aprovar" class="btn btn-primary"><i class="ph ph-check"></i> Aprovar orçamento</button>
+        <button type="submit" name="decisao" value="recusar" class="btn btn-secundario"><i class="ph ph-x"></i> Recusar orçamento</button>
+      </form>
+      <p style="font-size:12px;color:var(--texto-fraco);margin-top:8px">
+        Ao aprovar, o técnico inicia o conserto. Ao recusar, o serviço não é executado e
+        só o deslocamento é cobrado ({{ (os.custo_deslocamento or 0) | moeda }}).
+      </p>
+      {% elif os.orcamento_status == 'recusado' %}
+      <div class="flash erro"><i class="ph ph-x-circle"></i>
+        Orçamento RECUSADO. O serviço NÃO foi executado no equipamento e nenhuma peça foi usada.
+        Cobrança só do deslocamento: {{ (os.custo_deslocamento or 0) | moeda }}.
+      </div>
+      {% elif os.status == 'entregue' %}
+      <div class="flash sucesso"><i class="ph ph-check-circle"></i>
+        ENTREGUE em {{ os.data_entrega | data_hora }}: você confirmou que o equipamento foi entregue funcionando.
+      </div>
+      {% if os.assinatura_cliente %}
+      <img class="assinatura-img" src="{{ os.assinatura_cliente }}" alt="Sua assinatura na entrega">
+      {% endif %}
+      {% elif not aguarda_entrega %}
+      <div class="flash sucesso"><i class="ph ph-check-circle"></i> Orçamento APROVADO: o técnico já pode fazer o serviço.</div>
+      {% endif %}
+
+      <p style="margin-top:16px">
+        <a class="btn btn-secundario btn-sm" href="{{ url_for('os.comprovante_publico', token=token) }}" target="_blank" rel="noopener">
+          <i class="ph ph-file-pdf"></i> Ver comprovante / PDF
+        </a>
+      </p>
+    </div>
+  </div>
+
+  {% if aguarda_entrega %}
+  <div class="card" style="margin-top:16px">
+    <div class="card-cab"><span class="card-titulo">Serviço executado</span></div>
+    <div class="card-corpo">
+      <p style="white-space:pre-wrap">{{ os.descricao_execucao }}</p>
+      <p><span class="badge badge-verde"><i class="ph ph-check"></i> Funcionamento testado pelo técnico</span></p>
+      {% if os.foto_depois %}
+      <img class="im-atual" src="{{ url_for('static', filename=os.foto_depois) }}" alt="Equipamento depois do serviço">
+      {% endif %}
+
+      <form method="post" id="formEntrega" style="margin-top:16px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="decisao" value="entregue">
+        <input type="hidden" name="assinatura" id="assinaturaDado" value="">
+        <label for="assinaturaQuadro"><strong>Assine aqui com o dedo ou o mouse</strong></label>
+        <canvas id="assinaturaQuadro" class="assinatura-quadro" width="520" height="180"
+                aria-label="Quadro para assinatura"></canvas>
+        <div class="im-acoes" style="margin-top:8px">
+          {# .im-msg é vermelho (erro de upload); aqui é instrução, então cor neutra #}
+          <span class="im-msg" id="assinaturaMsg" aria-live="polite" style="color:var(--texto-fraco)">Assine para liberar a confirmação.</span>
+          <button type="button" class="btn btn-secundario btn-sm" id="assinaturaLimpar">
+            <i class="ph ph-eraser"></i> Limpar
+          </button>
+          <button type="submit" class="btn btn-primary" id="assinaturaConfirmar" disabled>
+            <i class="ph ph-check-circle"></i> Confirmo: equipamento ENTREGUE funcionando
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts_publico %}
+{% if aguarda_entrega %}
+<script nonce="{{ csp_nonce() }}">
+/* Assinatura em canvas: pointer events cobrem dedo, caneta e mouse.
+   O traço vira PNG (data URL) no hidden; o servidor confere que é PNG de verdade. */
+(function () {
+  var cv = document.getElementById("assinaturaQuadro");
+  var ctx = cv.getContext("2d");
+  var dado = document.getElementById("assinaturaDado");
+  var btn = document.getElementById("assinaturaConfirmar");
+  var msg = document.getElementById("assinaturaMsg");
+  // Libera pelo COMPRIMENTO do traço, não pelo número de eventos: um risco
+  // rápido gera poucos pointermove e não pode ser tratado como "sem assinatura".
+  var MIN_TRACO = 80;
+  var desenhando = false, comprimento = 0, ultimo = null;
+
+  function limpa() {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    comprimento = 0; dado.value = ""; btn.disabled = true;
+    msg.textContent = "Assine para liberar a confirmação.";
+  }
+  function ponto(e) {
+    var r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    desenhando = true; cv.setPointerCapture(e.pointerId);
+    var p = ponto(e); ultimo = p; ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  });
+  cv.addEventListener("pointermove", function (e) {
+    if (!desenhando) return;
+    var p = ponto(e);
+    ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#111827";
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+    comprimento += Math.hypot(p.x - ultimo.x, p.y - ultimo.y); ultimo = p;
+  });
+  ["pointerup", "pointercancel"].forEach(function (ev) {
+    cv.addEventListener(ev, function () {
+      if (!desenhando) return;
+      desenhando = false;
+      if (comprimento >= MIN_TRACO) {
+        dado.value = cv.toDataURL("image/png");
+        btn.disabled = false;
+        msg.textContent = "Assinatura pronta.";
+      }
+    });
+  });
+  document.getElementById("assinaturaLimpar").addEventListener("click", limpa);
+  limpa();
+})();
+</script>
+{% endif %}
+{% endblock %}

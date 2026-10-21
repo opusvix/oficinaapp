@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OS #{{ os.id }} · Comprovante</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fonts/phosphor/style.css') }}">
+  {# Folha própria: o comprovante é papel, sempre claro, sem sidebar nem topbar #}
+  <style>
+    body { margin: 0; background: var(--fundo); color: var(--texto); font-family: var(--font-corpo, Inter, system-ui, sans-serif); font-size: 13px; }
+    .folha { max-width: 780px; margin: 24px auto; background: var(--superficie); padding: 32px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .acoes { max-width: 780px; margin: 16px auto 0; display: flex; justify-content: flex-end; gap: 8px; padding: 0 16px; }
+    .acoes button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--branco); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+    .cab { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--accent); padding-bottom: 12px; margin-bottom: 16px; }
+    .cab h1 { font-family: var(--font-titulo, Sora, sans-serif); font-size: 20px; margin: 0; }
+    .cab .empresa { font-weight: 700; font-size: 15px; }
+    .selo { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: var(--borda); }
+    .selo.entregue { background: var(--verde-suave); color: var(--verde-escuro); }
+    .selo.recusada { background: var(--vermelho-suave); color: var(--vermelho-escuro); }
+    .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; margin-bottom: 16px; }
+    .rot { display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--texto-fraco); }
+    h2 { font-size: 14px; margin: 18px 0 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--borda); }
+    th { font-size: 11px; text-transform: uppercase; color: var(--texto-fraco); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .fotos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .fotos img { width: 100%; max-height: 220px; object-fit: contain; border: 1px solid var(--borda); border-radius: 8px; }
+    .assin { max-width: 320px; max-height: 120px; border-bottom: 1px solid var(--texto); }
+    .aviso { padding: 10px 12px; border-radius: 8px; background: var(--ambar-suave); }
+    .rodape { margin-top: 24px; font-size: 11px; color: var(--texto-fraco); }
+    @media print {
+      body { background: var(--superficie); }
+      .acoes { display: none; }
+      .folha { margin: 0; box-shadow: none; border-radius: 0; padding: 0; max-width: none; }
+      @page { margin: 14mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="acoes">
+    <button type="button" id="btnImprimir"><i class="ph ph-printer"></i> Imprimir / Salvar PDF</button>
+  </div>
+
+  <div class="folha">
+    <div class="cab">
+      <div>
+        <div class="empresa">{{ empresa }}</div>
+        <h1>Ordem de Serviço #{{ os.id }}</h1>
+      </div>
+      <span class="selo {{ os.status }}">{{ os.status.replace('_', ' ').upper() }}</span>
+    </div>
+
+    <div class="grade">
+      <div><span class="rot">Cliente</span>{{ os.cliente }}</div>
+      <div><span class="rot">Patrimônio / Tag</span>{{ os.patrimonio }}</div>
+      <div><span class="rot">Técnico</span>{{ os.tecnico_nome or '—' }}</div>
+      <div><span class="rot">Abertura</span>{{ os.data_abertura | data_hora }}</div>
+    </div>
+
+    <h2>Problema relatado</h2>
+    <p style="white-space:pre-wrap; margin:0">{{ os.descricao_inicial or '—' }}</p>
+
+    <h2>Orçamento</h2>
+    {% if itens %}
+    <table>
+      <thead><tr><th>Descrição</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Subtotal</th></tr></thead>
+      <tbody>
+        {% for i in itens %}
+        <tr><td>{{ i.descricao }}</td><td class="num">{{ i.quantidade }}</td>
+            <td class="num">{{ (i.preco_unitario or 0) | moeda }}</td><td class="num">{{ (i.subtotal or 0) | moeda }}</td></tr>
+        {% endfor %}
+        <tr><td colspan="3"><strong>Soma dos itens</strong></td><td class="num"><strong>{{ (soma_itens) | moeda }}</strong></td></tr>
+      </tbody>
+    </table>
+    {% endif %}
+    {# Orçamento = soma dos itens; recusa cobra só o deslocamento #}
+    {% set recusada = os.status == 'recusada' %}
+    <div class="grade" style="margin-top:10px">
+      <div><span class="rot">Orçamento (soma dos itens)</span>{{ (os.orcamento_valor or 0) | moeda }}</div>
+      <div><span class="rot">Deslocamento</span>{{ (os.custo_deslocamento or 0) | moeda }}</div>
+      <div><span class="rot">{{ "Total cobrado (só deslocamento)" if recusada else "Total" }}</span>
+        <strong>{{ ((os.custo_deslocamento or 0) if recusada else ((os.orcamento_valor or 0) + (os.custo_deslocamento or 0))) | moeda }}</strong></div>
+      <div><span class="rot">Situação do orçamento</span>{{ os.orcamento_status }}</div>
+    </div>
+
+    {% if os.status == 'recusada' %}
+    <p class="aviso">Orçamento RECUSADO pelo cliente{% if os.data_recusa %} em {{ os.data_recusa | data_hora }}{% endif %}.
+      O serviço NÃO foi executado e nenhuma peça foi usada. Cobrança só do deslocamento:
+      {{ (os.custo_deslocamento or 0) | moeda }}.</p>
+    {% endif %}
+
+    {% if os.descricao_execucao %}
+    <h2>Serviço executado</h2>
+    <p style="white-space:pre-wrap; margin:0">{{ os.descricao_execucao }}</p>
+    <p style="margin:6px 0 0">Funcionamento testado: <strong>{{ 'Sim' if os.testado_funcionamento else 'Não' }}</strong></p>
+    {% endif %}
+
+    {% if os.foto_antes or os.foto_depois %}
+    <h2>Fotos</h2>
+    <div class="fotos">
+      {% if os.foto_antes %}<div><span class="rot">Antes</span><img src="{{ url_for('static', filename=os.foto_antes) }}" alt="Equipamento antes do serviço"></div>{% endif %}
+      {% if os.foto_depois %}<div><span class="rot">Depois</span><img src="{{ url_for('static', filename=os.foto_depois) }}" alt="Equipamento depois do serviço"></div>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if os.status == 'entregue' %}
+    <h2>Entrega</h2>
+    <p style="margin:0">Confirmada pelo cliente em {{ os.data_entrega | data_hora }}: equipamento entregue funcionando.</p>
+    {% if os.assinatura_cliente %}
+    <img class="assin" src="{{ os.assinatura_cliente }}" alt="Assinatura do cliente">
+    <div class="rot">Assinatura do cliente</div>
+    {% endif %}
+    {% endif %}
+
+    <div class="rodape">Emitido em {{ emitido }}{% if not publico %} · uso interno{% endif %}</div>
+  </div>
+
+<script nonce="{{ csp_nonce() }}">
+document.getElementById("btnImprimir").addEventListener("click", function () { window.print(); });
+</script>
+</body>
+</html>

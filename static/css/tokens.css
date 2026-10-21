@@ -1,0 +1,139 @@
+/* tokens.css - Variáveis de cor, fonte, espaçamento, sombra, raio */
+/* Cor da marca: #3387E9 | Token: --accent */
+
+:root {
+  /* Light theme (default) */
+  --accent: #3387E9;
+  --accent-suave: #D6EAF8;
+  --accent-escura: #1E6FD0;
+  --accent-hover: #2979D0;
+  --accent-soft: rgba(51, 135, 233, 0.1);
+  --accent-sombra: rgba(51, 135, 233, 0.3);
+  --accent-texto: #FFFFFF;
+  /* Texto sobre superfícies --accent-suave/--accent-soft (nav ativa, badge,
+     ícone KPI): #1E6FD0 dava 4,01:1 na nav ativa — um passo mais escuro passa */
+  --accent-texto-escuro: #1A62C0;
+
+  /* Superfície sólida de botão/gradiente (4,5:1 com --accent-texto).
+     Branco sobre o azul da marca #3387E9 dá 3,6:1 — decisão de 14/10/2026:
+     botões no azul profundo, marca #3387E9 continua em ícones, bordas e nav */
+  --accent-solido: #1E6FD0;       /* 5,0:1 com branco */
+  --accent-solido-fim: #1A5CB0;   /* 2ª parada do gradiente e hover: 6,6:1 */
+
+  --verde: #16a34a;
+  --verde-suave: #DCFCE7;
+  --verde-escuro: #15803D;
+  --vermelho: #DC2626;
+  --vermelho-suave: #FEE2E2;
+  --vermelho-escuro: #B91C1C;
+  --ambar: #F59E0B;
+  --ambar-suave: #FEF3C7;
+  --ambar-escuro: #B45309;
+  --azul-info: #0EA5E9;
+  --azul-suave: #E0F2FE;
+  --azul-escuro: #0369A1;
+
+  /* Superfícies e texto (light) */
+  --branco: #FFFFFF;
+  --superficie: #FFFFFF;
+  --superficie-alt: #F8F9FA;
+  --fundo: #F3F4F6;
+  --borda: #E5E7EB;
+  --borda-forte: #D1D5DB;
+  --texto: #1F2937;
+  /* Hierarquia legível (medida em tela: a antiga dava 2,5:1 nos rótulos)
+     secundário 7,5:1 e fraco 4,9:1 sobre o fundo claro */
+  --texto-secundario: #4B5563;
+  --texto-fraco: #656B78;
+
+  /* Tipografia - duas famílias */
+  --font: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-titulo: "Sora", "Inter", sans-serif;
+
+  /* Escala tipográfica */
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+
+  /* Espaçamento */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* Raios */
+  --raio-sm: 6px;
+  --raio: 10px;
+  --raio-lg: 16px;
+  --raio-full: 9999px;
+
+  /* Sombras */
+  --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --sombra: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --sombra-md: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --sombra-lg: 0 16px 40px rgba(0, 0, 0, 0.15);
+
+  /* Transições */
+  --transicao: 150ms ease;
+
+  /* Layout */
+  --sidebar-width: 248px;
+  --topbar-height: 60px;
+}
+
+[data-theme="dark"] {
+  /* Dark theme */
+  --accent: #4A9EFF;
+  --accent-suave: #1A3A5C;
+  --accent-escura: #1E6FD0;
+  --accent-hover: #6BB3FF;
+  --accent-soft: rgba(74, 158, 255, 0.15);
+  --accent-sombra: rgba(74, 158, 255, 0.4);
+  --accent-texto: #0D1B2A;
+  --accent-texto-claro: #FFFFFF;
+  /* Texto sobre --accent-soft (badge, ícone KPI, nav ativa): precisa clarear
+     no dark — o valor claro (#1E6FD0) dava 2,4:1 sobre a superfície escura */
+  --accent-texto-escuro: #93C5FD;
+
+  /* No escuro o accent clareia, então aqui o botão é claro com texto marinho */
+  --accent-solido: #4A9EFF;       /* 6,3:1 com #0D1B2A */
+  --accent-solido-fim: #6BB3FF;   /* 7,9:1 */
+
+  --verde: #22C55E;
+  --verde-suave: #14532D;
+  /* Texto sobre --verde-suave (badge/flash de sucesso). O #166534 antigo era
+     verde-escuro sobre verde-escuro: 1,28:1 — letra praticamente invisível */
+  --verde-escuro: #BBF7D0;
+  --vermelho: #EF4444;
+  --vermelho-suave: #7F1D1D;
+  --vermelho-escuro: #FECACA;
+  --ambar: #FBBF24;
+  --ambar-suave: #78350F;
+  --ambar-escuro: #FDE68A;
+  --azul-info: #38BDF8;
+  --azul-suave: #1E3A5F;
+  --azul-escuro: #BAE6FD;
+
+  /* Superfícies e texto (dark) */
+  --branco: #1E1E2E;
+  --superficie: #1E1E2E;
+  --superficie-alt: #282838;
+  --fundo: #151520;
+  --borda: #3A3A4A;
+  --borda-forte: #4A4A5A;
+  --texto: #E0E0E0;
+  /* Mesma hierarquia do claro, invertida: o fraco antigo (#707080) dava 3,4:1 */
+  --texto-secundario: #C9C9D6;
+  --texto-fraco: #A0A0B0;
+
+  /* Sombras dark */
+  --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --sombra: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --sombra-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --sombra-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+}

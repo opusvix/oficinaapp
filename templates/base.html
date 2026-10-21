@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    {# PWA (Padrao_PWA_Notificacoes): manifest dinâmico + ícone do iPhone + cor da barra #}
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <meta name="theme-color" content="{{ pwa_cor_tema }}">{# core/pwa.py: meta não lê variável CSS #}
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>{% block titulo %}OficinaApp{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/phosphor/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body data-theme="{{ session.get('tema', 'light') }}">
+    <script nonce="{{ csp_nonce() }}">
+    (function() {
+        try {
+            var w = parseInt(localStorage.getItem('sidebar_width'), 10);
+            if (w && w >= 200 && w <= 480) {
+                document.documentElement.style.setProperty('--sidebar-width', w + 'px');
+            }
+        } catch (e) {}
+    })();
+    </script>
+
+    {# pagina_publica: o link do cliente usa o layout público MESMO com alguém logado
+       (o técnico conferindo o link vê exatamente o que o cliente vê) #}
+    {% if current_user.is_authenticated and not pagina_publica %}
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <aside class="sidebar" id="sidebar">
+        <!-- Marca -->
+        <div class="sidebar-marca">
+            <div class="logo-quadro">
+                <i class="ph ph-wrench"></i>
+            </div>
+            <div>
+                <div class="marca-nome">OficinaApp</div>
+                <div class="marca-sub">Gestão de Assistência Técnica</div>
+            </div>
+        </div>
+
+        <!-- Navegação (vem de core.menu.get_user_menu: módulo do seed + permissão do perfil) -->
+        <nav class="sidebar-nav" aria-label="Menu principal">
+            {% for grupo in user_menu %}
+            <div class="grupo aberto">
+                <button class="grupo-cab" type="button" aria-expanded="true">
+                    <span class="grupo-label">{{ grupo.nome }}</span>
+                    <i class="ph ph-caret-right grupo-chevron"></i>
+                </button>
+                <div class="grupo-corpo">
+                    <div class="corpo-interno">
+                        {% for item in grupo.itens %}
+                            {% if item.pronto %}
+                            <a href="{{ item.rota }}" class="nav-item {{ 'ativo' if item.ativo else '' }}"
+                               {{ 'aria-current="page"' if item.ativo else '' }}>
+                                <i class="ph {{ item.icone }}"></i> {{ item.nome }}
+                            </a>
+                            {% else %}
+                            <span class="nav-item nav-item-off" title="Rota ainda não implantada">
+                                <i class="ph {{ item.icone }}"></i> {{ item.nome }}
+                                <em class="nav-em-breve">em breve</em>
+                            </span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not user_menu %}
+            <p class="menu-vazio">Seu perfil não tem módulos liberados.<br>Fale com o administrador.</p>
+            {% endif %}
+        </nav>
+
+        <!-- Rodapé -->
+        <div class="sidebar-rodape">
+            <a href="/home" class="btn-home-side {{ 'ativo' if request.endpoint == 'home' else '' }}">
+                <i class="ph ph-house"></i>
+                <span>Início</span>
+            </a>
+            <div class="usuario-box">
+                <div class="avatar">{{ current_user.nome[:1]|upper }}</div>
+                <div class="info">
+                    <div class="nome">{{ current_user.nome }}</div>
+                    <div class="papel">{{ current_user.perfil_nome }}</div>
+                </div>
+                <a href="/auth/trocar-senha" class="btn-fantasma btn btn-sm" title="Trocar senha" style="padding:7px">
+                    <i class="ph ph-key"></i>
+                </a>
+                <a href="/auth/logout" class="btn-fantasma btn btn-sm" title="Sair" style="padding:7px">
+                    <i class="ph ph-sign-out"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Drag handle -->
+        <div class="sidebar-resize" id="sidebarResize"></div>
+    </aside>
+
+    <header class="topbar">
+        <button class="btn btn-fantasma btn-icone menu-btn" id="menuBtn" type="button"
+                aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+            <i class="ph ph-list"></i>
+        </button>
+        <div class="tb-titulo">
+            <span class="titulo-pagina">{% block topo %}{% endblock %}</span>
+        </div>
+        <div class="tb-acoes">
+            {% block topo_acoes %}{% endblock %}
+            <span class="cv-sw tema-sw" title="Alternar tema claro/escuro">
+                <input type="checkbox" id="toggleTemaTopo" data-tema-toggle
+                       aria-label="Tema escuro">
+                <label for="toggleTemaTopo"></label>
+            </span>
+            <a href="{{ url_for('notificacoes.listar') }}"
+               class="btn btn-fantasma btn-icone sino"
+               title="{{ notif_nao_lidas }} notificação(ões) não lida(s)"
+               aria-label="Notificações{% if notif_nao_lidas %}, {{ notif_nao_lidas }} não lidas{% endif %}">
+                <i class="ph ph-bell"></i>
+                {% if notif_nao_lidas %}
+                <span class="sino-badge" aria-hidden="true">{{ '99+' if notif_nao_lidas > 99 else notif_nao_lidas }}</span>
+                {% endif %}
+            </a>
+            <div class="usuario-box">
+                <div class="avatar">{{ current_user.nome[:1]|upper }}</div>
+                <div class="info">
+                    <div class="nome">{{ current_user.nome }}</div>
+                    <div class="papel">{{ current_user.perfil_nome }}</div>
+                </div>
+                <a href="/auth/trocar-senha" class="btn-fantasma btn btn-sm" title="Trocar senha" style="padding:7px"><i class="ph ph-key"></i></a>
+                <a href="/auth/logout" class="btn-fantasma btn btn-sm" title="Sair" style="padding:7px"><i class="ph ph-sign-out"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <main class="conteudo" id="conteudo">
+        {% block flashes %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container" style="position:fixed;top:80px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px;max-width:360px">
+                {% for cat, msg in messages %}
+                <div class="flash {{cat}}" style="padding:12px 16px;border-radius:8px;font-size:13px;box-shadow:var(--sombra);animation:slideIn .3s ease;background:{% if cat=='erro' %}var(--vermelho-suave);color:var(--vermelho-escuro){% elif cat=='sucesso' %}var(--verde-suave);color:var(--verde-escuro){% else %}var(--azul-suave);color:var(--azul-escuro){% endif %}">
+                    {{ msg }}
+                </div>
+                {% endfor %}
+            </div>
+            <style>@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}</style>
+            {% endif %}
+        {% endwith %}
+        {% endblock %}
+        {% block conteudo %}{% endblock %}
+    </main>
+
+    {# ── Confirmação destrutiva (Padrao_Modal: .modal-sm.modal-confirm) ──────
+       Sai SOMENTE pelo X, Cancelar ou Confirmar: ESC e backdrop não fecham. #}
+    <div class="modal-overlay" id="modalConfirm" role="alertdialog" aria-modal="true"
+         aria-labelledby="modalConfirmTitulo">
+      <div class="modal sm modal-confirm">
+        <div class="modal-cab">
+          <span class="modal-titulo" id="modalConfirmTitulo">Confirmar</span>
+          <button type="button" class="modal-fechar" id="modalConfirmFechar"
+                  data-fechar-modal aria-label="Fechar">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          <span class="confirm-icone confirm-perigo" aria-hidden="true"><i class="ph ph-warning"></i></span>
+          <p class="confirm-texto" id="modalConfirmTexto"></p>
+        </div>
+        <div class="modal-rodape">
+          <button type="button" class="btn btn-secundario" id="modalConfirmCancelar"
+                  data-fechar-modal>Cancelar</button>
+          <button type="button" class="btn btn-perigo" id="modalConfirmOk">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- SelectBusca: componente global (cidade na OS, cidade no cliente, peças na OS) -->
+    <script src="{{ url_for('static', filename='js/selectbusca.js') }}"></script>
+    <!-- PWA: registra o service worker (só logado; o link público do cliente não instala) -->
+    <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+    <!-- Token CSRF em variável global: fetch do TabelaAvancada lê window.CSRF_TOKEN -->
+    <script nonce="{{ csp_nonce() }}">window.CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;</script>
+    {% block scripts %}{% endblock %}
+    {% else %}
+    <!-- Páginas públicas: link do cliente (sem sidebar nem topbar).
+         ATENÇÃO: aqui o block conteudo NÃO existe. Página pública usa
+         conteudo_publico e scripts_publico; com conteudo, o cliente vê tela branca. -->
+    <main class="conteudo-publico">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+            <div class="flash {{ cat }}" style="margin-bottom:12px">{{ msg }}</div>
+            {% endfor %}
+        {% endwith %}
+        {% block conteudo_publico %}{% endblock %}
+    </main>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts_publico %}{% endblock %}
+    {% endif %}
+</body>
+</html>

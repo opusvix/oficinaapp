@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titulo %}Notificações · OficinaApp{% endblock %}
+{% block topo %}Notificações{% endblock %}
+
+{% block topo_acoes %}
+{% set nao_lidas = itens|rejectattr('lida')|list %}
+{% if nao_lidas %}
+<form method="post" action="{{ url_for('notificacoes.marcar_lidas') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="destino" value="{{ url_for('notificacoes.listar') }}">
+  <button class="btn btn-secundario btn-sm" type="submit">
+    <i class="ph ph-check-check"></i> Marcar {{ nao_lidas|length }} como lida(s)
+  </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block conteudo %}
+<div class="container" style="max-width:900px">
+  {% if itens %}
+  <div class="lista-notif">
+    {% for n in itens %}
+    <a class="notif {{ 'nao-lida' if not n.lida }}" href="{{ n.rota or url_for('notificacoes.listar') }}">
+      <span class="n-ico {{ n.tipo }}">
+        {% if n.tipo == 'sucesso' %}<i class="ph ph-check-circle"></i>
+        {% elif n.tipo == 'erro' %}<i class="ph ph-x-circle"></i>
+        {% elif n.tipo == 'aviso' %}<i class="ph ph-warning"></i>
+        {% else %}<i class="ph ph-info"></i>{% endif %}
+      </span>
+      <span class="n-corpo">
+        <span class="n-tit">{{ n.titulo }}</span>
+        {% if n.mensagem %}<span class="n-msg">{{ n.mensagem }}</span>{% endif %}
+      </span>
+      <span class="n-data">{{ n.datestamp_insert | data_hora(vazio='') }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-corpo vazio-centro">
+      <i class="ph ph-bell" style="font-size:44px;opacity:.4"></i>
+      <p>Nenhuma notificação por aqui.</p>
+      <p class="sub">Avisos de OS aguardando aprovação, peça no mínimo de estoque e caixa a fechar aparecem aqui.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
