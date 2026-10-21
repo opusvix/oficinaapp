@@ -1,0 +1,5 @@
+# Netlify: publica a landing page estática da pasta site/.
+# Serve tanto conectando este repositório quanto arrastando a pasta site/ no painel.
+[build]
+  publish = "site"
+  command = ""

@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OficinaApp — Gestão para assistências técnicas</title>
+<meta name="description" content="Sistema de gestão para oficinas e assistências técnicas: ordens de serviço com aprovação do cliente por link, agenda e rotas, financeiro com PDV, relatórios e app que instala no celular.">
+<meta property="og:title" content="OficinaApp — Gestão para assistências técnicas">
+<meta property="og:description" content="Do orçamento à entrega assinada pelo cliente, num sistema só.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="img/inicio.jpg">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#3387E9; --accent-esc:#1E6FD0; --tinta:#0f172a; --tinta2:#475569;
+    --fraco:#94a3b8; --borda:#e2e8f0; --fundo:#f6f8fb; --branco:#fff;
+    --verde:#16a34a; --card-sombra:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--tinta);background:var(--fundo);line-height:1.6}
+  h1,h2,h3{font-family:Sora,sans-serif;line-height:1.15;letter-spacing:-.02em;margin:0}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:12px 20px;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:.15s}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-esc)}
+  .btn-ghost{background:#fff;border-color:var(--borda);color:var(--tinta)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* topo */
+  header{position:sticky;top:0;z-index:10;background:rgba(246,248,251,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--borda)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .marca{display:flex;align-items:center;gap:10px;font-family:Sora;font-weight:700;font-size:18px}
+  .marca img{width:30px;height:30px}
+  .nav-links{display:flex;gap:10px}
+  @media(max-width:640px){.nav-links .rotulo{display:none}}
+
+  /* hero */
+  .hero{padding:72px 0 48px;text-align:center;background:
+    radial-gradient(900px 380px at 50% -40%, rgba(51,135,233,.14), transparent 70%)}
+  .selo{display:inline-block;font-size:13px;font-weight:600;color:var(--accent-esc);background:rgba(51,135,233,.1);padding:6px 14px;border-radius:999px;margin-bottom:20px}
+  .hero h1{font-size:clamp(32px,5vw,52px);font-weight:800}
+  .hero p{max-width:640px;margin:18px auto 0;font-size:clamp(16px,2.3vw,19px);color:var(--tinta2)}
+  .hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  .hero-shot{margin:48px auto 0;max-width:960px}
+  .hero-shot img{width:100%;border-radius:14px;border:1px solid var(--borda);box-shadow:var(--card-sombra)}
+
+  /* seções */
+  section{padding:56px 0}
+  .tit{text-align:center;max-width:640px;margin:0 auto 40px}
+  .tit h2{font-size:clamp(26px,3.5vw,36px);font-weight:700}
+  .tit p{color:var(--tinta2);margin-top:12px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--branco);border:1px solid var(--borda);border-radius:14px;padding:22px;box-shadow:var(--card-sombra)}
+  .card .ic{width:44px;height:44px;border-radius:11px;background:rgba(51,135,233,.1);display:grid;place-items:center;font-size:22px;margin-bottom:14px}
+  .card h3{font-size:18px;font-weight:600}
+  .card p{color:var(--tinta2);font-size:15px;margin:8px 0 0}
+
+  /* destaque cliente */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+  @media(max-width:860px){.split{grid-template-columns:1fr}}
+  .split img{width:100%;border-radius:14px;border:1px solid var(--borda);box-shadow:var(--card-sombra)}
+  .split h2{font-size:clamp(24px,3.2vw,32px);font-weight:700}
+  .split p{color:var(--tinta2);margin-top:14px;font-size:16px}
+  .lista{list-style:none;padding:0;margin:18px 0 0}
+  .lista li{display:flex;gap:10px;align-items:flex-start;margin:10px 0;color:var(--tinta)}
+  .lista li::before{content:"✓";color:var(--verde);font-weight:800}
+
+  /* galeria */
+  .galeria{background:var(--branco);border-top:1px solid var(--borda);border-bottom:1px solid var(--borda)}
+  .shots{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  @media(max-width:720px){.shots{grid-template-columns:1fr}}
+  .shot{border:1px solid var(--borda);border-radius:12px;overflow:hidden;background:var(--fundo)}
+  .shot img{width:100%;display:block}
+  .shot span{display:block;padding:10px 14px;font-size:14px;color:var(--tinta2);font-weight:500}
+  .shot.mob{display:flex;align-items:center;justify-content:center;padding:18px}
+  .shot.mob img{width:260px;border-radius:10px;border:1px solid var(--borda)}
+
+  /* números */
+  .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;text-align:center}
+  @media(max-width:620px){.nums{grid-template-columns:repeat(2,1fr)}}
+  .num b{display:block;font-family:Sora;font-size:30px;font-weight:800;color:var(--accent-esc)}
+  .num span{color:var(--tinta2);font-size:14px}
+
+  /* cta final */
+  .final{text-align:center}
+  .final .box{background:linear-gradient(135deg,var(--accent),var(--accent-esc));color:#fff;border-radius:18px;padding:48px 24px}
+  .final h2{color:#fff;font-size:clamp(24px,3.5vw,34px)}
+  .final p{color:rgba(255,255,255,.9);max-width:520px;margin:12px auto 24px}
+  .final .btn-ghost{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4);color:#fff}
+  .final .btn-ghost:hover{background:rgba(255,255,255,.2);color:#fff}
+  .final .btn-light{background:#fff;color:var(--accent-esc)}
+
+  footer{padding:32px 0;text-align:center;color:var(--fraco);font-size:14px}
+  footer a{color:var(--tinta2);font-weight:500}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="marca"><img src="favicon.svg" alt=""> OficinaApp</div>
+    <div class="nav-links">
+      <a class="btn btn-ghost" href="https://github.com/opusvix/oficinaapp" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-ghost" href="https://gitlab.com/opusvix/oficinaapp" target="_blank" rel="noopener">GitLab</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="selo">Gestão para assistências técnicas e oficinas</span>
+      <h1>Do orçamento à entrega assinada,<br>num sistema só.</h1>
+      <p>Ordens de serviço com aprovação do cliente por link, agenda e rotas por técnico,
+         financeiro com PDV, relatórios e um app que instala no celular.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://github.com/opusvix/oficinaapp" target="_blank" rel="noopener">Ver no GitHub →</a>
+        <a class="btn btn-ghost" href="https://gitlab.com/opusvix/oficinaapp" target="_blank" rel="noopener">Ver no GitLab</a>
+      </div>
+      <div class="hero-shot"><img src="img/inicio.jpg" alt="Tela de início do OficinaApp"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="tit">
+        <h2>Tudo o que a oficina precisa, organizado</h2>
+        <p>O que hoje vive em cadernos, planilhas e no WhatsApp, reunido num fluxo só.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="ic">🧰</div><h3>Ordens de serviço</h3><p>Patrimônio próprio, foto do antes e depois, orçamento somando os itens e baixa automática do estoque na entrega.</p></div>
+        <div class="card"><div class="ic">✍️</div><h3>Aprovação do cliente</h3><p>O cliente aprova ou recusa por um link, sem senha, e assina a entrega na própria tela.</p></div>
+        <div class="card"><div class="ic">🗓️</div><h3>Agenda e rotas</h3><p>Agenda semanal por técnico e a rota do dia agrupada por bairro, com link direto pro mapa.</p></div>
+        <div class="card"><div class="ic">💰</div><h3>Financeiro + PDV</h3><p>Caixa com sangria e suprimento, contas a pagar e a receber, parcelamento e recibo.</p></div>
+        <div class="card"><div class="ic">📦</div><h3>Estoque</h3><p>Alerta de estoque mínimo, entrada e saída, e importação de peças por planilha Excel.</p></div>
+        <div class="card"><div class="ic">📊</div><h3>Relatórios</h3><p>OS por técnico, tempo médio, peças mais usadas e faturamento por cliente — exportáveis.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap split">
+      <img src="img/link-cliente.jpg" alt="Tela de aprovação do cliente por link">
+      <div>
+        <h2>O cliente aprova pelo celular, sem instalar nada</h2>
+        <p>Cada ordem de serviço gera um link. O cliente abre, vê as peças e o total,
+           e decide — aprovar ou recusar. Na entrega, assina na tela.</p>
+        <ul class="lista">
+          <li>Sem login, sem app, sem fricção</li>
+          <li>Recusou? Cobra só o deslocamento</li>
+          <li>Entregou? A peça baixa do estoque e a conta a receber nasce sozinha</li>
+          <li>Comprovante em PDF pra mandar no WhatsApp</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="galeria">
+    <div class="wrap">
+      <div class="tit"><h2>Por dentro do sistema</h2></div>
+      <div class="shots">
+        <div class="shot"><img src="img/agenda.jpg" alt="Agenda semanal"><span>Agenda da semana por técnico</span></div>
+        <div class="shot"><img src="img/financeiro.jpg" alt="Painel financeiro"><span>Financeiro com indicadores do dia</span></div>
+        <div class="shot"><img src="img/os-lista.jpg" alt="Ordens de serviço"><span>Ordens de serviço</span></div>
+        <div class="shot"><img src="img/relatorios.jpg" alt="Relatórios"><span>Relatórios exportáveis</span></div>
+        <div class="shot"><img src="img/caixa.jpg" alt="Controle de caixa"><span>Controle de caixa</span></div>
+        <div class="shot"><img src="img/estoque.jpg" alt="Estoque de peças"><span>Estoque com alerta de mínimo</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap split">
+      <div>
+        <h2>Feito pra rua — e pra durar</h2>
+        <p>O técnico instala como app no celular e abre a agenda em qualquer lugar.
+           E, por baixo, segurança levada a sério: login protegido, permissões por perfil,
+           registro de tudo e <strong>529 casos de teste automatizados</strong>.</p>
+        <ul class="lista">
+          <li>Instalável no celular (PWA), com aviso quando cai a internet</li>
+          <li>Três perfis: administrador, técnico e cliente (por link)</li>
+          <li>Python + Flask, pronto pra rodar local ou em servidor com Docker</li>
+        </ul>
+      </div>
+      <div style="text-align:center"><img src="img/mobile-inicio.jpg" alt="OficinaApp no celular" style="width:300px;border-radius:16px"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap nums">
+      <div class="num"><b>7</b><span>módulos integrados</span></div>
+      <div class="num"><b>3</b><span>perfis de acesso</span></div>
+      <div class="num"><b>529</b><span>casos de teste</span></div>
+      <div class="num"><b>2</b><span>repositórios públicos</span></div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <div class="box">
+        <h2>Veja o projeto por dentro</h2>
+        <p>O código, a documentação e o passo a passo de instalação estão nos repositórios.</p>
+        <div class="hero-cta">
+          <a class="btn btn-light" href="https://github.com/opusvix/oficinaapp" target="_blank" rel="noopener">GitHub</a>
+          <a class="btn btn-ghost" href="https://gitlab.com/opusvix/oficinaapp" target="_blank" rel="noopener">GitLab</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    OficinaApp — desenvolvido para <strong>ESG Serviços Técnicos</strong> ·
+    <a href="https://github.com/opusvix/oficinaapp" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="https://gitlab.com/opusvix/oficinaapp" target="_blank" rel="noopener">GitLab</a>
+  </div>
+</footer>
+
+</body>
+</html>
