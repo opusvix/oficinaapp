@@ -119,7 +119,33 @@ OficinaApp/
 
 ## 📸 Telas
 
-> _Capturas de tela em breve._
+### Início — os números do dia num olhar
+![Tela de início com indicadores](docs/screenshots/inicio.jpg)
+
+### O cliente aprova o orçamento por um link, sem senha
+![Link de aprovação do cliente](docs/screenshots/link-cliente.jpg)
+
+### Ordens de serviço
+![Lista de ordens de serviço](docs/screenshots/os-lista.jpg)
+
+### Agenda da semana por técnico
+![Agenda semanal](docs/screenshots/agenda.jpg)
+
+### Financeiro com PDV e indicadores
+![Painel financeiro](docs/screenshots/financeiro.jpg)
+
+### Controle de caixa
+![Controle de caixa](docs/screenshots/caixa.jpg)
+
+### Relatórios exportáveis
+![Relatórios](docs/screenshots/relatorios.jpg)
+
+### Estoque com alerta de mínimo e importação por planilha
+![Estoque de peças](docs/screenshots/estoque.jpg)
+
+### Instala no celular (PWA)
+<img src="docs/screenshots/mobile-inicio.jpg" alt="Início no celular" width="320">
+
 
 ---
 
