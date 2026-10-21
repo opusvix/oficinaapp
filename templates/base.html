@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     {# PWA (Padrao_PWA_Notificacoes): manifest dinâmico + ícone do iPhone + cor da barra #}
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
@@ -41,11 +41,11 @@
         <!-- Marca -->
         <div class="sidebar-marca">
             <div class="logo-quadro">
-                <i class="ph ph-wrench"></i>
+                <img src="{{ url_for('static', filename='favicon.png') }}" alt="ESG Serviços Técnicos">
             </div>
             <div>
                 <div class="marca-nome">OficinaApp</div>
-                <div class="marca-sub">Gestão de Assistência Técnica</div>
+                <div class="marca-sub">ESG Serviços Técnicos</div>
             </div>
         </div>
 

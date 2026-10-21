@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <title>Entrar · OficinaApp</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
@@ -15,12 +15,8 @@
 <body>
 <main class="tela-auth">
     <div class="card card-auth">
-        <div class="auth-marca">
-            <div class="logo-quadro"><i class="ph ph-wrench"></i></div>
-            <div>
-                <div class="marca-nome">OficinaApp</div>
-                <div class="marca-sub">Gestão de Assistência Técnica</div>
-            </div>
+        <div class="auth-logo">
+            <img src="{{ url_for('static', filename='img/logo-esg.jpeg') }}" alt="ESG Serviços Técnicos">
         </div>
 
         <h1 class="auth-titulo">Entrar</h1>

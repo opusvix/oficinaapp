@@ -9,7 +9,7 @@
    Estáticos: rede primeiro (deploy novo aparece na hora), cache se estiver sem rede.
    Telas: sempre rede; sem rede, mostra /offline. */
 
-var CACHE = "oficina-v1";            // = core/pwa.py VERSAO_SW
+var CACHE = "oficina-v2";            // = core/pwa.py VERSAO_SW
 var PRECACHE = [
   "/offline",
   "/static/css/tokens.css",
@@ -23,7 +23,7 @@ var PRECACHE = [
   "/static/fonts/phosphor/Phosphor.woff2",
   "/static/js/main.js",
   "/static/js/selectbusca.js",
-  "/static/favicon.svg",
+  "/static/favicon.png",
   "/static/icons/icon-192.png"
 ];
 

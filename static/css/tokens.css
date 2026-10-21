@@ -1,24 +1,24 @@
 /* tokens.css - Variáveis de cor, fonte, espaçamento, sombra, raio */
-/* Cor da marca: #3387E9 | Token: --accent */
+/* Cor da marca ESG (laranja do logo): #F28333 | Token: --accent */
 
 :root {
   /* Light theme (default) */
-  --accent: #3387E9;
-  --accent-suave: #D6EAF8;
-  --accent-escura: #1E6FD0;
-  --accent-hover: #2979D0;
-  --accent-soft: rgba(51, 135, 233, 0.1);
-  --accent-sombra: rgba(51, 135, 233, 0.3);
+  --accent: #F28333;
+  --accent-suave: #FDEEE2;
+  --accent-escura: #C2410C;
+  --accent-hover: #DD7324;
+  --accent-soft: rgba(242, 131, 51, 0.1);
+  --accent-sombra: rgba(242, 131, 51, 0.3);
   --accent-texto: #FFFFFF;
   /* Texto sobre superfícies --accent-suave/--accent-soft (nav ativa, badge,
-     ícone KPI): #1E6FD0 dava 4,01:1 na nav ativa — um passo mais escuro passa */
-  --accent-texto-escuro: #1A62C0;
+     ícone KPI): laranja escuro #9A3412 dá contraste forte na superfície clara */
+  --accent-texto-escuro: #9A3412;
 
-  /* Superfície sólida de botão/gradiente (4,5:1 com --accent-texto).
-     Branco sobre o azul da marca #3387E9 dá 3,6:1 — decisão de 14/10/2026:
-     botões no azul profundo, marca #3387E9 continua em ícones, bordas e nav */
-  --accent-solido: #1E6FD0;       /* 5,0:1 com branco */
-  --accent-solido-fim: #1A5CB0;   /* 2ª parada do gradiente e hover: 6,6:1 */
+  /* Superfície sólida de botão/gradiente (4,5:1+ com --accent-texto).
+     Branco sobre o laranja da marca #F28333 dá só 2,6:1, então o BOTÃO usa o
+     laranja profundo; a marca #F28333 segue em ícones, bordas e nav */
+  --accent-solido: #C2410C;       /* 5,2:1 com branco */
+  --accent-solido-fim: #9A3412;   /* 2ª parada do gradiente e hover: 7,3:1 */
 
   --verde: #16a34a;
   --verde-suave: #DCFCE7;
@@ -88,21 +88,21 @@
 
 [data-theme="dark"] {
   /* Dark theme */
-  --accent: #4A9EFF;
-  --accent-suave: #1A3A5C;
-  --accent-escura: #1E6FD0;
-  --accent-hover: #6BB3FF;
-  --accent-soft: rgba(74, 158, 255, 0.15);
-  --accent-sombra: rgba(74, 158, 255, 0.4);
-  --accent-texto: #0D1B2A;
+  --accent: #F9A05A;
+  --accent-suave: #3D2212;
+  --accent-escura: #C2410C;
+  --accent-hover: #FBBF88;
+  --accent-soft: rgba(249, 160, 90, 0.15);
+  --accent-sombra: rgba(249, 160, 90, 0.4);
+  --accent-texto: #3A1C09;
   --accent-texto-claro: #FFFFFF;
-  /* Texto sobre --accent-soft (badge, ícone KPI, nav ativa): precisa clarear
-     no dark — o valor claro (#1E6FD0) dava 2,4:1 sobre a superfície escura */
-  --accent-texto-escuro: #93C5FD;
+  /* Texto sobre --accent-soft (badge, ícone KPI, nav ativa): clareia no dark
+     (laranja claro #FBBF88) pra passar na superfície escura */
+  --accent-texto-escuro: #FBBF88;
 
   /* No escuro o accent clareia, então aqui o botão é claro com texto marinho */
-  --accent-solido: #4A9EFF;       /* 6,3:1 com #0D1B2A */
-  --accent-solido-fim: #6BB3FF;   /* 7,9:1 */
+  --accent-solido: #F9A05A;       /* 7,6:1 com #3A1C09 */
+  --accent-solido-fim: #FBBF88;   /* 9,0:1 */
 
   --verde: #22C55E;
   --verde-suave: #14532D;

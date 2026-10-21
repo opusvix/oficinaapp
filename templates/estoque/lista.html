@@ -57,7 +57,7 @@
               <td class="col-num">{{ p.preco_custo_fmt }}</td>
               <td class="col-num">{{ p.preco_venda_fmt }}</td>
               <td class="col-num {% if p.estoque_baixo %}estoque-baixo{% endif %}">
-                <span class="badge {% if p.estoque_baixo %}badge-vermelho{% else %}badge-azul{% endif %}">
+                <span class="badge {% if p.estoque_baixo %}badge-vermelho{% else %}badge-cinza{% endif %}">
                   {{ p.estoque_atual_fmt }}
                 </span>
               </td>
