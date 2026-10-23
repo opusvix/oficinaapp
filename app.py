@@ -193,6 +193,16 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    # ABRIR_NAVEGADOR=1 (usado pelo atalho do pacote Windows) abre o navegador
+    # sozinho logo após o servidor subir. Fica fora de testes e do Docker, que
+    # não definem essa variável. O reloader roda o main duas vezes; o guard do
+    # WERKZEUG_RUN_MAIN evita abrir duas abas quando FLASK_DEBUG=1.
+    if os.getenv("ABRIR_NAVEGADOR") == "1" and os.getenv("WERKZEUG_RUN_MAIN") != "true":
+        import threading
+        import webbrowser
+
+        threading.Timer(1.5, lambda: webbrowser.open("http://127.0.0.1:5000/")).start()
+
     # Roda em 127.0.0.1:5000 (uso local pelo iniciar.bat). Debug (recarrega ao salvar e
     # mostra o console do Werkzeug, que executa código) só com FLASK_DEBUG=1 de propósito.
     # No servidor quem sobe o app é o gunicorn (Dockerfile), não este bloco.
