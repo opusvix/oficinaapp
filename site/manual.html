@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual — OficinaApp</title>
+<meta name="description" content="Guia rápido do OficinaApp: como abrir, criar uma ordem de serviço, o cliente aprovar pelo link, financeiro, estoque, agenda e relatórios.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<script>
+  (function(){
+    try{
+      var t = localStorage.getItem('tema');
+      if(!t){ t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+      document.documentElement.setAttribute('data-theme', t);
+    }catch(e){}
+  })();
+</script>
+<style>
+  :root{
+    --accent:#F28333; --accent-texto:#C2410C;
+    --btn-bg:#C2410C; --btn-hover:#9A3412; --btn-fg:#ffffff;
+    --tinta:#0f172a; --tinta2:#475569; --fraco:#94a3b8;
+    --borda:#e2e8f0; --fundo:#f6f8fb; --sup:#ffffff;
+    --card-sombra:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  }
+  :root[data-theme="dark"]{
+    --accent:#F9A05A; --accent-texto:#F9A05A;
+    --btn-bg:#F28333; --btn-hover:#F9A05A; --btn-fg:#1a0d03;
+    --tinta:#f4f4f5; --tinta2:#a1a1aa; --fraco:#71717a;
+    --borda:#2a2a30; --fundo:#0c0c0e; --sup:#161619;
+    --card-sombra:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --accent:#F9A05A; --accent-texto:#F9A05A;
+      --btn-bg:#F28333; --btn-hover:#F9A05A; --btn-fg:#1a0d03;
+      --tinta:#f4f4f5; --tinta2:#a1a1aa; --fraco:#71717a;
+      --borda:#2a2a30; --fundo:#0c0c0e; --sup:#161619;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--tinta);background:var(--fundo);line-height:1.65}
+  h1,h2,h3{font-family:Sora,sans-serif;line-height:1.2;letter-spacing:-.02em;margin:0}
+  a{color:var(--accent-texto);text-decoration:none}
+  img{max-width:100%}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px}
+
+  header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--fundo) 85%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--borda)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:10px;max-width:860px;margin:0 auto;padding:0 20px}
+  .marca{display:flex;align-items:center;gap:10px;font-family:Sora;font-weight:700;font-size:18px;color:var(--tinta)}
+  .marca img{width:32px;height:32px;border-radius:8px}
+  .nav-dir{display:flex;align-items:center;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;border:1px solid var(--borda);background:var(--sup);color:var(--tinta);cursor:pointer;font-family:inherit}
+  .btn:hover{border-color:var(--accent)}
+  .btn-primary{background:var(--btn-bg);color:var(--btn-fg);border-color:transparent}
+  .btn-primary:hover{background:var(--btn-hover);color:var(--btn-fg)}
+  .tema-btn{width:40px;height:40px;border-radius:10px;padding:0;justify-content:center;font-size:18px}
+  .tema-btn .lua{display:none}
+  :root[data-theme="dark"] .tema-btn .sol{display:none}
+  :root[data-theme="dark"] .tema-btn .lua{display:inline}
+
+  .capa{padding:48px 0 8px;text-align:center}
+  .capa h1{font-size:clamp(30px,5vw,44px);font-weight:800}
+  .capa p{color:var(--tinta2);max-width:600px;margin:14px auto 0;font-size:17px}
+
+  /* índice */
+  .indice{background:var(--sup);border:1px solid var(--borda);border-radius:14px;padding:18px 22px;margin:28px 0;box-shadow:var(--card-sombra)}
+  .indice b{display:block;font-family:Sora;margin-bottom:10px}
+  .indice ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+  @media(max-width:560px){.indice ol{columns:1}}
+  .indice li{margin:5px 0}
+
+  /* passos */
+  .passo{padding:30px 0;border-top:1px solid var(--borda)}
+  .passo .num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--btn-bg);color:var(--btn-fg);font-family:Sora;font-weight:800;margin-bottom:12px}
+  .passo h2{font-size:clamp(21px,3vw,27px);font-weight:700}
+  .passo p{color:var(--tinta2);margin:10px 0 0}
+  .passo ul{color:var(--tinta2);margin:10px 0 0;padding-left:20px}
+  .passo li{margin:6px 0}
+  .passo .shot{margin-top:18px;border:1px solid var(--borda);border-radius:12px;overflow:hidden;box-shadow:var(--card-sombra)}
+  .passo .shot img{display:block;width:100%}
+  .dica{margin-top:14px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;font-size:14.5px;color:var(--accent-texto)}
+
+  footer{padding:36px 0;border-top:1px solid var(--borda);text-align:center;color:var(--fraco);font-size:14px;margin-top:20px}
+  footer a{color:var(--tinta2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <a class="marca" href="index.html"><img src="favicon.png" alt=""> OficinaApp</a>
+    <div class="nav-dir">
+      <button class="btn tema-btn" id="temaBtn" type="button" aria-label="Alternar tema"><span class="sol">☀️</span><span class="lua">🌙</span></button>
+      <a class="btn" href="index.html">← Início</a>
+      <a class="btn btn-primary" data-link="demo" href="https://opusvix.pythonanywhere.com" target="_blank" rel="noopener">Testar online</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="capa">
+    <div class="wrap">
+      <h1>Manual do OficinaApp</h1>
+      <p>Um guia rápido, sem termos técnicos, pra você começar a usar. Em poucos minutos você cria a primeira ordem de serviço e manda pro cliente aprovar.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <nav class="indice">
+      <b>O que tem aqui</b>
+      <ol>
+        <li><a href="#abrir">Como abrir o sistema</a></li>
+        <li><a href="#entrar">Primeiro acesso</a></li>
+        <li><a href="#cliente">Cadastrar cliente e equipamento</a></li>
+        <li><a href="#os">Criar uma ordem de serviço</a></li>
+        <li><a href="#aprovar">O cliente aprova pelo link</a></li>
+        <li><a href="#financeiro">Entrega e financeiro</a></li>
+        <li><a href="#estoque">Estoque de peças</a></li>
+        <li><a href="#agenda">Agenda e rotas</a></li>
+        <li><a href="#relatorios">Relatórios</a></li>
+        <li><a href="#celular">Usar no celular</a></li>
+      </ol>
+    </nav>
+
+    <section class="passo" id="abrir">
+      <span class="num">1</span>
+      <h2>Como abrir o sistema</h2>
+      <p>Há dois jeitos, e você escolhe o que preferir:</p>
+      <ul>
+        <li><strong>Testar online:</strong> clique em “Testar online” aqui em cima — a demonstração abre no navegador, sem instalar nada.</li>
+        <li><strong>Instalar no computador:</strong> baixe o pacote na página inicial, dê dois cliques no <em>Instalar.bat</em> e abra pelo atalho que aparece na Área de Trabalho.</li>
+      </ul>
+      <div class="dica">Na demonstração online, o e-mail e a senha de acesso aparecem na própria tela de login — é só clicar em “Preencher automaticamente”.</div>
+      <div class="shot"><img src="img/inicio.jpg" alt="Tela inicial do OficinaApp"></div>
+    </section>
+
+    <section class="passo" id="entrar">
+      <span class="num">2</span>
+      <h2>Primeiro acesso</h2>
+      <p>Na versão instalada, na primeira vez a janela preta mostra a <strong>senha inicial</strong> do administrador (o e-mail padrão é <em>admin@oficina.local</em>). Anote essa senha para entrar. Depois, a tela inicial (“Início”) resume o seu dia: ordens em aberto, visitas de hoje, o que há a receber, o caixa e as peças no mínimo.</p>
+    </section>
+
+    <section class="passo" id="cliente">
+      <span class="num">3</span>
+      <h2>Cadastrar cliente e equipamento</h2>
+      <p>No menu, em <strong>Cadastros → Clientes</strong>, você adiciona o cliente (nome, CPF ou CNPJ, endereço). Em cada cliente dá pra cadastrar os <strong>equipamentos</strong> dele (o aparelho que vai pra manutenção), com modelo, marca e número de série.</p>
+    </section>
+
+    <section class="passo" id="os">
+      <span class="num">4</span>
+      <h2>Criar uma ordem de serviço</h2>
+      <p>Em <strong>Operacional → Ordens de Serviço</strong>, clique em “Nova OS”. Você escolhe o cliente e o equipamento, descreve o problema, tira foto do antes, e vai somando as <strong>peças</strong> e serviços — o orçamento se monta sozinho.</p>
+      <div class="shot"><img src="img/os-lista.jpg" alt="Lista de ordens de serviço"></div>
+    </section>
+
+    <section class="passo" id="aprovar">
+      <span class="num">5</span>
+      <h2>O cliente aprova pelo link</h2>
+      <p>Cada ordem gera um <strong>link</strong>. Você manda pelo WhatsApp e o cliente abre no celular, vê as peças e o total, e <strong>aprova ou recusa</strong> — sem senha e sem instalar nada. Na entrega, ele assina na própria tela.</p>
+      <ul>
+        <li>Recusou? Você cobra só o deslocamento.</li>
+        <li>Aprovou e entregou? A peça baixa do estoque e a conta a receber nasce sozinha.</li>
+      </ul>
+      <div class="shot"><img src="img/link-cliente.jpg" alt="Tela de aprovação do cliente pelo link"></div>
+    </section>
+
+    <section class="passo" id="financeiro">
+      <span class="num">6</span>
+      <h2>Entrega e financeiro</h2>
+      <p>Em <strong>Financeiro / PDV</strong> você acompanha contas a pagar e a receber, parcela, dá baixa e emite <strong>recibo</strong> pra mandar pro cliente. O <strong>Controle de Caixa</strong> registra entradas, sangria e suprimento do dia.</p>
+      <div class="shot"><img src="img/financeiro.jpg" alt="Painel financeiro"></div>
+    </section>
+
+    <section class="passo" id="estoque">
+      <span class="num">7</span>
+      <h2>Estoque de peças</h2>
+      <p>Em <strong>Cadastros → Peças / Estoque</strong> ficam as peças, com <strong>aviso de estoque mínimo</strong> (as que estão acabando aparecem destacadas e no painel inicial). Dá pra cadastrar uma a uma ou <strong>importar por planilha de Excel</strong> (tem um modelo pronto pra baixar).</p>
+      <div class="shot"><img src="img/estoque.jpg" alt="Estoque de peças"></div>
+    </section>
+
+    <section class="passo" id="agenda">
+      <span class="num">8</span>
+      <h2>Agenda e rotas</h2>
+      <p>Em <strong>Agenda e Rotas</strong> você vê a semana por técnico e a <strong>rota do dia</strong> agrupada por bairro, com link direto pro mapa — pra não cruzar a cidade à toa.</p>
+      <div class="shot"><img src="img/agenda.jpg" alt="Agenda semanal"></div>
+    </section>
+
+    <section class="passo" id="relatorios">
+      <span class="num">9</span>
+      <h2>Relatórios</h2>
+      <p>Em <strong>Relatórios</strong> você acompanha OS por técnico, tempo médio de atendimento, peças mais usadas e faturamento por cliente — tudo pronto pra exportar.</p>
+      <div class="shot"><img src="img/relatorios.jpg" alt="Relatórios"></div>
+    </section>
+
+    <section class="passo" id="celular">
+      <span class="num">10</span>
+      <h2>Usar no celular</h2>
+      <p>O sistema abre no navegador do celular e pode ser <strong>instalado como aplicativo</strong> na tela inicial (ele avisa quando a internet cai). Ideal pro técnico na rua, com a agenda e as OS na mão.</p>
+      <div class="shot" style="max-width:320px;margin-left:auto;margin-right:auto"><img src="img/mobile-inicio.jpg" alt="OficinaApp no celular"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← Voltar para a página inicial</a> · OficinaApp — ESG Serviços Técnicos
+  </div>
+</footer>
+
+<script>
+  document.getElementById('temaBtn').addEventListener('click', function(){
+    var atual = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    var novo = atual === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', novo);
+    try{ localStorage.setItem('tema', novo); }catch(e){}
+  });
+</script>
+</body>
+</html>
