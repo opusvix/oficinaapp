@@ -375,6 +375,11 @@ def logout():
 @auth_bp.route("/trocar-senha", methods=["GET", "POST"])
 @login_required
 def trocar_senha():
+    from core.demo import modo_demo
+    if modo_demo():
+        # Demo compartilhada: a senha é pública de propósito. Trocar trancaria os outros.
+        flash("Na demonstração não é possível trocar a senha.", "erro")
+        return redirect(url_for("home"))
     if request.method == "POST":
         atual = request.form.get("senha_atual") or ""
         nova = request.form.get("senha_nova") or ""

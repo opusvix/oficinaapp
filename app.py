@@ -17,6 +17,7 @@ from core.auth import auth_bp, login_manager, User, bootstrap_admin, aplicar_aut
 from core.security import security_bp, init_security
 from core.applog import init_applog, log_event
 from core.menu import init_menu
+from core.demo import init_demo, preparar_demo
 from core.tempo import data_hora, so_data
 from modules.admin import admin_bp
 from modules.notificacoes import notificacoes_bp
@@ -109,6 +110,9 @@ def create_app() -> Flask:
     # PWA: manifest, service worker da raiz, página offline (core/pwa.py)
     init_pwa(app)
 
+    # Modo demonstração: expõe modo_demo/demo_cred aos templates (core/demo.py)
+    init_demo(app)
+
     # Datas: o banco guarda UTC, a tela mostra hora local (core/tempo.py)
     app.add_template_filter(data_hora, "data_hora")
     app.add_template_filter(so_data, "so_data")
@@ -123,6 +127,7 @@ def create_app() -> Flask:
         init_db()
         bootstrap_admin()
         aplicar_auto_liberacoes()  # módulo novo já nasce liberado nos perfis configurados
+        preparar_demo()            # MODO_DEMO: senha pública sem forçar troca + dados de exemplo
 
     # Rota raiz
     @app.route("/")

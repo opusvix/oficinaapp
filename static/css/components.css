@@ -694,3 +694,55 @@ table.tabela tfoot td { padding: 12px 14px; font-weight: 700; border-top: 2px so
 /* Login: logo real da ESG num cartão preto (combina com o fundo do logo) */
 .auth-logo { background: #08080a; border-radius: 12px; padding: 16px 18px; margin-bottom: 22px; }
 .auth-logo img { display: block; width: 100%; max-width: 240px; height: auto; margin: 0 auto; }
+
+/* ── Modo demonstração (core/demo.py) ─────────────────────────────────────── */
+.demo-acesso {
+    background: var(--accent-suave);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+}
+.demo-acesso strong {
+    color: var(--accent-texto-escuro);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.demo-acesso p {
+    margin: 6px 0 10px;
+    font-size: 13px;
+    color: var(--texto-secundario);
+}
+.demo-acesso dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 0 0 12px;
+    font-size: 14px;
+}
+.demo-acesso dt { color: var(--texto-fraco); }
+.demo-acesso dd { margin: 0; font-weight: 600; font-family: ui-monospace, monospace; }
+
+.demo-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: var(--accent-suave);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--accent-texto-escuro);
+}
+.demo-bar-form { margin: 0; }
+.demo-bar .btn {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+.demo-bar .btn:hover { background: var(--accent-hover); }

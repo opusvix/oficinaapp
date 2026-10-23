@@ -365,6 +365,11 @@ def seguranca():
 @admin_bp.route("/seguranca/salvar", methods=["POST"])
 @login_required
 def seguranca_salvar():
+    from core.demo import modo_demo
+    if modo_demo():
+        # Demo: um visitante poderia pôr max_tentativas=1 e trancar todo mundo.
+        flash("Na demonstração os parâmetros de segurança ficam travados.", "erro")
+        return redirect(url_for("admin.seguranca"))
     if not current_user.pode("seguranca", "editar"):
         abort(403)
     valores = {k: (request.form.get(k) or "").strip() for k in _PARAMS_SEG}
@@ -387,3 +392,22 @@ def seguranca_salvar():
                f"janela={dados.lockout_janela_min} ip={dados.ip_protecao_modo}")
     flash("Parâmetros de segurança salvos. Já valem no próximo acesso.", "sucesso")
     return redirect(url_for("admin.seguranca"))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Reiniciar a demonstração (só em MODO_DEMO). Zera os dados de negócio e devolve
+# os dados de exemplo — pra demo compartilhada não ir "sujando" com o uso.
+# ──────────────────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/reiniciar-demo", methods=["POST"])
+@login_required
+def reiniciar_demo_rota():
+    from core.demo import modo_demo, reiniciar_demo
+    if not modo_demo():
+        abort(404)
+    if not current_user.pode("auth", "editar"):   # só quem administra usuários
+        abort(403)
+    reiniciar_demo()
+    log_acesso("DEMO_REINICIADA", current_user.id)
+    flash("Demonstração reiniciada: os dados de exemplo foram restaurados.", "sucesso")
+    return redirect(url_for("home"))

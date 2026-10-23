@@ -143,6 +143,17 @@
     </header>
 
     <main class="conteudo" id="conteudo">
+        {% if modo_demo %}
+        <div class="demo-bar" role="note">
+            <span><i class="ph ph-flask"></i> Você está na <strong>demonstração</strong> — dados compartilhados e de exemplo. Não cadastre dados reais.</span>
+            <form method="post" action="{{ url_for('admin.reiniciar_demo_rota') }}" class="demo-bar-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm">
+                    <i class="ph ph-arrow-counter-clockwise"></i> Reiniciar demonstração
+                </button>
+            </form>
+        </div>
+        {% endif %}
         {% block flashes %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}

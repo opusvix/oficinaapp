@@ -21,6 +21,20 @@
 
         <h1 class="auth-titulo">Entrar</h1>
 
+        {% if modo_demo and demo_cred %}
+        <div class="demo-acesso" role="note">
+            <strong><i class="ph ph-flask"></i> Demonstração</strong>
+            <p>Use o acesso abaixo para entrar e explorar à vontade.</p>
+            <dl>
+                <dt>E-mail</dt><dd id="demoEmail">{{ demo_cred.email }}</dd>
+                <dt>Senha</dt><dd id="demoSenha">{{ demo_cred.senha }}</dd>
+            </dl>
+            <button type="button" class="btn btn-fantasma btn-sm w-full" id="preencherDemo">
+                <i class="ph ph-magic-wand"></i> Preencher automaticamente
+            </button>
+        </div>
+        {% endif %}
+
         {% with messages = get_flashed_messages(category_filter=["erro"]) %}
             {% if messages %}
             <div class="flash erro" style="margin-bottom:16px">
@@ -45,5 +59,14 @@
         </form>
     </div>
 </main>
+{% if modo_demo and demo_cred %}
+<script nonce="{{ csp_nonce() }}">
+    document.getElementById('preencherDemo').addEventListener('click', function () {
+        document.getElementById('email').value = document.getElementById('demoEmail').textContent.trim();
+        document.getElementById('senha').value = document.getElementById('demoSenha').textContent.trim();
+        document.getElementById('senha').focus();
+    });
+</script>
+{% endif %}
 </body>
 </html>
