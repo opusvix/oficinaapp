@@ -66,3 +66,5 @@ static/uploads/
 *.key
 *.crt
 *.pfx
+# pacote de download: vai junto no deploy do Netlify, mas nao no git
+site/*.zip
