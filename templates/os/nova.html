@@ -90,10 +90,10 @@
           <div class="campo {{ 'erro' if erros.get('status') }}">
             <label for="status">Status inicial</label>
             <div class="selectbusca" id="sbStatus"
-                 data-opcoes='[{"valor": "aberta", "rotulo": "Aberta"}, {"valor": "avaliacao", "rotulo": "Avaliação"}]'>
-              <input type="hidden" name="status" value="{{ valores.get('status') or 'aberta' }}">
+                 data-opcoes='[{"valor": "avaliacao", "rotulo": "Aguardando avaliação"}, {"valor": "garantia_fabrica", "rotulo": "Garantia de Fábrica"}]'>
+              <input type="hidden" name="status" value="{{ valores.get('status') or 'avaliacao' }}">
               <input class="sb-input" type="text" id="status" autocomplete="off" readonly
-                     value="{{ 'Avaliação' if valores.get('status') == 'avaliacao' else 'Aberta' }}">
+                     value="{{ 'Garantia de Fábrica' if valores.get('status') == 'garantia_fabrica' else 'Aguardando avaliação' }}">
               <i class="ph ph-caret-down sb-seta"></i>
               <div class="sb-lista"></div>
             </div>

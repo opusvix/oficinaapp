@@ -106,21 +106,33 @@ def gerar_recebivel_os(db, id_os: int, evento: str) -> int | None:
     ).fetchone():
         return None
     os_row = db.execute(
-        "SELECT id, id_cliente, patrimonio, orcamento_valor, custo_deslocamento "
-        "FROM ordem_servico WHERE id = ?", (id_os,)
+        """SELECT os.id, os.id_cliente, os.patrimonio, os.orcamento_valor,
+                  os.custo_deslocamento, os.garantia_fabrica, e.marca
+             FROM ordem_servico os
+             LEFT JOIN equipamento e ON e.id = os.id_equipamento
+            WHERE os.id = ?""", (id_os,)
     ).fetchone()
     desloc = dinheiro(os_row["custo_deslocamento"])
-    if evento == "entregue":
+    if os_row["garantia_fabrica"]:
+        # Garantia de Fábrica: mão de obra + deslocamento cobrados do FABRICANTE,
+        # não do cliente. Título SEM cliente; o fabricante (marca) vai na descrição.
+        valor = dinheiro(os_row["orcamento_valor"]) + desloc
+        fab = (os_row["marca"] or "fabricante").strip()
+        desc = f"OS #{id_os} ({os_row['patrimonio']}): Garantia de Fábrica — cobrar do fabricante ({fab})"
+        id_cliente = None
+    elif evento == "entregue":
         valor = dinheiro(os_row["orcamento_valor"]) + desloc
         desc = f"OS #{id_os} ({os_row['patrimonio']}): serviço entregue"
+        id_cliente = os_row["id_cliente"]
     else:
         valor = desloc
         desc = f"OS #{id_os} ({os_row['patrimonio']}): deslocamento (orçamento recusado)"
+        id_cliente = os_row["id_cliente"]
     if valor <= 0:
         return None
     dados = TituloIn(tipo="RECEBER", descricao=desc, valor=str(valor),
                      data_vencimento=hoje_local().isoformat(),
-                     id_cliente=str(os_row["id_cliente"]) if os_row["id_cliente"] else None)
+                     id_cliente=str(id_cliente) if id_cliente else None)
     return criar_titulos(db, dados, None, id_os=id_os)[0]
 
 

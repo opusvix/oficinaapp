@@ -108,7 +108,7 @@ pub = app.test_client()   # o cliente: sem login
 
 # ── 1. Abertura, itens, foto ANTES ───────────────────────────────────────────
 o1 = nova_os()
-chk("técnico abre OS (status aberta, técnico dono)", os_(o1, "status") == "aberta" and os_(o1, "id_tecnico") == tec)
+chk("técnico abre OS (status Aguardando avaliação, técnico dono)", os_(o1, "status") == "avaliacao" and os_(o1, "id_tecnico") == tec)
 post(t, f"/os/{o1}/item", id_peca=str(peca), descricao="Resistência", quantidade="2", preco_unitario="85")
 post(t, f"/os/{o1}/item", descricao="Fio de silicone (fora do estoque)", quantidade="1", preco_unitario="12")
 chk("2 itens: 1 do estoque e 1 digitado livre",

@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS ordem_servico (
     entrega_solicitada_em   TIMESTAMP,              -- técnico pediu a validação; zera se mexer na execução
     data_recusa             TIMESTAMP,
     custo_deslocamento      DECIMAL(12,2) DEFAULT 0,
+    garantia_fabrica        SMALLINT DEFAULT 0,         -- 1 = OS em garantia: autoriza/cobra o fabricante, peça não baixa estoque
     D_E_L_E_T               SMALLINT DEFAULT 0,
     datestamp_insert        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at              TIMESTAMP

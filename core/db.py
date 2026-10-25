@@ -56,6 +56,7 @@ def _migracoes(db: sqlite3.Connection) -> None:
         ("ordem_servico", "testado_funcionamento",
          "testado_funcionamento SMALLINT NOT NULL DEFAULT 0"),
         ("ordem_servico", "entrega_solicitada_em", "entrega_solicitada_em TIMESTAMP"),
+        ("ordem_servico", "garantia_fabrica", "garantia_fabrica SMALLINT NOT NULL DEFAULT 0"),
         # Fase 7: títulos a pagar/receber
         ("financeiro", "id_cliente", "id_cliente INTEGER REFERENCES cliente(id)"),
         ("financeiro", "fornecedor", "fornecedor VARCHAR(200)"),

@@ -26,8 +26,8 @@
   <div class="card">
     <div class="card-cab">
       <span class="card-titulo">Dados da OS</span>
-      <span class="badge badge-{% if os.status == 'entregue' %}verde{% elif os.status == 'recusada' %}vermelho{% elif os.status == 'aprovada' %}azul{% elif os.status == 'em_andamento' %}ambar{% else %}cinza{% endif %}">
-        {{ os.status.replace('_', ' ').title() }}
+      <span class="badge badge-{% if os.status == 'entregue' %}verde{% elif os.status == 'recusada' %}vermelho{% elif os.status == 'aprovada' %}azul{% elif os.status in ('em_andamento', 'garantia_fabrica') %}ambar{% else %}cinza{% endif %}">
+        {{ rotulos_status.get(os.status, os.status) }}
       </span>
     </div>
     <div class="card-corpo">
@@ -66,6 +66,31 @@
     </div>
   </div>
 
+  {# ── Garantia de Fábrica: quem autoriza/reprova é o fabricante, não o cliente ── #}
+  {% if pode_editar and os.status == "garantia_fabrica" %}
+  <div class="card">
+    <div class="card-cab"><span class="card-titulo"><i class="ph ph-shield-check"></i> Garantia de Fábrica</span></div>
+    <div class="card-corpo">
+      <p class="valor">Nesta OS quem autoriza ou reprova é o <strong>fabricante</strong>, não o cliente.
+         A mão de obra e o deslocamento são cobrados do fabricante; as peças não baixam do estoque.</p>
+      <p class="rotulo" style="margin-top:10px">Lance a mão de obra como item (abaixo) antes de autorizar.
+         Se o fabricante reprovar, a OS passa a ser do cliente (aprovação e custo normais).</p>
+      <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
+        <form method="post" action="{{ url_for('os.fabricante_decisao', id_os=os.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="decisao" value="autorizar">
+          <button class="btn btn-primary" type="submit"><i class="ph ph-check-circle"></i> Fabricante autorizou</button>
+        </form>
+        <form method="post" action="{{ url_for('os.fabricante_decisao', id_os=os.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="decisao" value="reprovar">
+          <button class="btn btn-perigo" type="submit"><i class="ph ph-x-circle"></i> Fabricante reprovou</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Link de aprovação: o flash some no refresh, então ele fica aqui ── #}
   {% if pode_editar and token_valido and os.status != "entregue" %}
   {% set pede_entrega = os.status == "em_andamento" and os.entrega_solicitada_em %}
@@ -97,7 +122,7 @@
   <div class="card" style="margin-top:16px">
     <div class="card-cab">
       <span class="card-titulo">Itens / Peças</span>
-      {% if pode_editar and os.status in ("aberta", "avaliacao") %}
+      {% if pode_editar and os.status in ("aberta", "avaliacao", "garantia_fabrica") %}
       <button class="btn btn-secundario btn-sm" type="button" data-clique="abrirItem">
         <i class="ph ph-plus"></i> Adicionar item
       </button>
@@ -117,7 +142,7 @@
           </tr>
         </thead>
         <tbody>
-          {% set itens_abertos = pode_editar and os.status in ("aberta", "avaliacao") %}
+          {% set itens_abertos = pode_editar and os.status in ("aberta", "avaliacao", "garantia_fabrica") %}
           {% for i in itens %}
           <tr>
             <td class="col-num">{{ i.peca_codigo or '—' }}</td>

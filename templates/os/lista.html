@@ -83,8 +83,8 @@
               <td>{{ o.cliente }}</td>
               <td>{{ o.tecnico or '—' }}</td>
               <td>
-                <span class="badge badge-{% if o.status == 'entregue' %}verde{% elif o.status == 'recusada' %}vermelho{% elif o.status == 'aprovada' %}azul{% elif o.status == 'em_andamento' %}ambar{% else %}cinza{% endif %}">
-                  {{ o.status.replace('_', ' ').title() }}
+                <span class="badge badge-{% if o.status == 'entregue' %}verde{% elif o.status == 'recusada' %}vermelho{% elif o.status == 'aprovada' %}azul{% elif o.status in ('em_andamento', 'garantia_fabrica') %}ambar{% else %}cinza{% endif %}">
+                  {{ rotulos_status.get(o.status, o.status.replace('_', ' ').title()) }}
                 </span>
               </td>
               <td class="col-num">{{ (o.orcamento_valor or 0) | moeda }}</td>
@@ -112,7 +112,7 @@
                    href="{{ url_for('os.comprovante', id_os=o.id) }}">
                   <i class="ph ph-file-pdf"></i>
                 </a>
-                {% if pode_editar and o.status in ("aberta", "avaliacao") %}
+                {% if pode_editar and o.status in ("aberta", "avaliacao", "garantia_fabrica") %}
                 <button type="button" class="btn btn-icone" title="Cancelar OS"
                         data-clique="cancelarOS" data-com-el
                         data-url="{{ url_for('os.cancelar', id_os=o.id) }}" data-nome="OS #{{ o.id }} ({{ o.patrimonio }})">

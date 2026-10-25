@@ -37,9 +37,10 @@ from modules.validacao_os import ItemOSIn, OSIn
 
 os_bp = Blueprint("os", __name__, url_prefix="/os")
 
-_STATUS_VALIDOS = {"aberta", "avaliacao", "aprovada", "em_andamento", "entregue", "recusada"}
-ORDEM_STATUS = ["aberta", "avaliacao", "aprovada", "em_andamento", "entregue", "recusada"]
-ROTULOS_STATUS = {"": "Todos", "aberta": "Aberta", "avaliacao": "Avaliação", "aprovada": "Aprovada",
+_STATUS_VALIDOS = {"aberta", "avaliacao", "garantia_fabrica", "aprovada", "em_andamento", "entregue", "recusada"}
+ORDEM_STATUS = ["aberta", "avaliacao", "garantia_fabrica", "aprovada", "em_andamento", "entregue", "recusada"]
+ROTULOS_STATUS = {"": "Todos", "aberta": "Aberta", "avaliacao": "Aguardando avaliação",
+                  "garantia_fabrica": "Garantia de Fábrica", "aprovada": "Aprovada",
                   "em_andamento": "Em andamento", "entregue": "Entregue", "recusada": "Recusada"}
 
 # Padrao_Barra_de_Filtros: lista FECHADA, nesta ordem, padrão "Mês atual"
@@ -80,7 +81,7 @@ def periodo_do_request(args) -> tuple[str, str | None, str | None]:
 # Upload de fotos da OS: regras de tipo e tamanho em core/upload.py.
 # Momentos em que a foto pode ser trocada (foto ANTES na recepção, DEPOIS na execução)
 MOMENTOS_FOTO = {
-    "antes": ("foto_antes", {"aberta", "avaliacao", "aprovada", "em_andamento"}),
+    "antes": ("foto_antes", {"aberta", "avaliacao", "garantia_fabrica", "aprovada", "em_andamento"}),
     "depois": ("foto_depois", {"aprovada", "em_andamento"}),
 }
 
@@ -161,7 +162,7 @@ def listar():
     params: list = []
 
     if status == "ativas":
-        sql += " AND os.status IN ('aberta', 'avaliacao', 'aprovada', 'em_andamento')"
+        sql += " AND os.status IN ('aberta', 'avaliacao', 'garantia_fabrica', 'aprovada', 'em_andamento')"
     elif status:
         sql += " AND os.status = ?"
         params.append(status)
@@ -295,6 +296,9 @@ def nova():
         return tela(erros, valores, 422)
 
     linhas = dados.para_linhas()
+    # Garantia de Fábrica: marca persistente (quem autoriza/paga é o fabricante,
+    # peça não baixa estoque). A decisão da fábrica vem depois, na tela de detalhe.
+    linhas["garantia_fabrica"] = 1 if linhas.get("status") == "garantia_fabrica" else 0
     # Técnico abre OS sempre pra si: o id_tecnico do form só vale pro Administrador
     if _so_as_proprias():
         linhas["id_tecnico"] = current_user.id
@@ -369,6 +373,7 @@ def detalhe(id_os: int):
     return render_template(
         "os/detalhe.html",
         os=dict(os_row),
+        rotulos_status=ROTULOS_STATUS,
         itens=[dict(i) for i in itens],
         pode_editar=current_user.pode("os", "editar"),
         pode_ver=current_user.pode("os", "ver"),
@@ -522,6 +527,41 @@ def entregar(id_os: int):
     return redirect(url_for("os.detalhe", id_os=id_os))
 
 
+@os_bp.route("/<int:id_os>/fabricante", methods=["POST"])
+@login_required
+def fabricante_decisao(id_os: int):
+    """Garantia de Fábrica: o fabricante autoriza ou reprova (registrado internamente,
+    não é o cliente). Autorizar segue como OS aprovada; reprovar devolve a OS ao cliente."""
+    os_row = _os_do_usuario(id_os, "editar", "os.id, os.status, os.garantia_fabrica")
+    if not os_row["garantia_fabrica"] or os_row["status"] != "garantia_fabrica":
+        flash("Esta OS não está aguardando a decisão do fabricante.", "erro")
+        return redirect(url_for("os.detalhe", id_os=id_os))
+
+    decisao = (request.form.get("decisao") or "").strip().lower()
+    if decisao not in ("autorizar", "reprovar"):
+        abort(400)
+
+    with transaction() as db:
+        if decisao == "autorizar":
+            # Fábrica autorizou: segue como OS aprovada, sem consultar o cliente.
+            db.execute(
+                """UPDATE ordem_servico
+                      SET status = 'aprovada', orcamento_status = 'aprovado',
+                          data_aprovacao = CURRENT_TIMESTAMP
+                    WHERE id = ?""", (id_os,))
+        else:
+            # Fábrica reprovou: a OS passa a ser do cliente (aprovação + custo + estoque).
+            db.execute(
+                """UPDATE ordem_servico
+                      SET status = 'avaliacao', garantia_fabrica = 0, orcamento_status = 'pendente'
+                    WHERE id = ?""", (id_os,))
+    log_acesso("OS_FABRICANTE_" + decisao.upper(), current_user.id, f"os={id_os}")
+    flash("Fabricante autorizou. Registre a execução e entregue normalmente." if decisao == "autorizar"
+          else "Fabricante reprovou. A OS passou a ser do cliente: envie o orçamento pra aprovação.",
+          "sucesso")
+    return redirect(url_for("os.detalhe", id_os=id_os))
+
+
 def _renova_token(db, id_os: int) -> None:
     """Gera token público novo com a validade da configuracao (padrão 7 dias)."""
     row = db.execute(
@@ -548,6 +588,10 @@ def _baixa_estoque(db, id_os: int) -> None:
     O saldo pode ficar negativo de propósito: a peça já foi usada, e o negativo
     acusa o erro de inventário em vez de esconder.
     """
+    # Garantia de Fábrica: as peças vêm do fabricante, então NÃO saem do estoque.
+    g = db.execute("SELECT garantia_fabrica FROM ordem_servico WHERE id = ?", (id_os,)).fetchone()
+    if g and g["garantia_fabrica"]:
+        return
     itens = db.execute(
         "SELECT id_peca, quantidade FROM item_os "
         "WHERE id_os = ? AND id_peca IS NOT NULL AND D_E_L_E_T = 0",
@@ -599,7 +643,7 @@ def _assinatura_valida(dado: str) -> str | None:
 @login_required
 def adicionar_item(id_os: int):
     os_row = _os_do_usuario(id_os, "editar", "os.id, os.status")
-    if os_row["status"] not in ("aberta", "avaliacao"):
+    if os_row["status"] not in ("aberta", "avaliacao", "garantia_fabrica"):
         flash("Não é possível adicionar itens nesta etapa da OS.", "erro")
         return redirect(url_for("os.detalhe", id_os=id_os))
 
@@ -650,7 +694,7 @@ def remover_item(id_os: int, id_item: int):
     """Tira item lançado errado. Só antes da aprovação: depois, o cliente já
     aprovou aquele valor e mexer nele seria mudar o combinado."""
     os_row = _os_do_usuario(id_os, "editar", "os.id, os.status")
-    if os_row["status"] not in ("aberta", "avaliacao"):
+    if os_row["status"] not in ("aberta", "avaliacao", "garantia_fabrica"):
         flash("Depois da aprovação os itens não mudam mais.", "erro")
         return redirect(url_for("os.detalhe", id_os=id_os))
     with transaction() as db:
@@ -690,7 +734,7 @@ def recalcula_orcamento(db, id_os: int) -> None:
 def publico(token: str):
     os_row = query_one(
         """SELECT os.id, os.patrimonio, os.status, os.orcamento_status,
-                  os.orcamento_valor, os.custo_deslocamento,
+                  os.orcamento_valor, os.custo_deslocamento, os.garantia_fabrica,
                   os.descricao_inicial, os.descricao_execucao, os.testado_funcionamento,
                   os.foto_depois, os.entrega_solicitada_em, os.assinatura_cliente,
                   os.data_entrega, os.data_abertura, os.token_expira,
@@ -879,8 +923,8 @@ def comprovante_publico(token: str):
 def cancelar(id_os: int):
     """Cancela OS que ainda não foi aprovada (soft delete; o link público morre junto)."""
     os_row = _os_do_usuario(id_os, "editar", "os.id, os.status")
-    if os_row["status"] not in ("aberta", "avaliacao"):
-        flash("Só dá pra cancelar OS aberta ou em avaliação: depois da aprovação ela segue o fluxo.", "erro")
+    if os_row["status"] not in ("aberta", "avaliacao", "garantia_fabrica"):
+        flash("Só dá pra cancelar OS aberta, em avaliação ou garantia: depois da aprovação ela segue o fluxo.", "erro")
         return redirect(url_for("os.listar"))
     with transaction() as db:
         db.execute(

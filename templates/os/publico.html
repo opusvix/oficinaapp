@@ -34,6 +34,12 @@
       </table>
       {% endif %}
 
+      {% if os.garantia_fabrica %}
+      {# Garantia de Fábrica: o custo é tratado com o fabricante, não com o cliente #}
+      <div class="flash sucesso" style="margin-top:12px"><i class="ph ph-shield-check"></i>
+        <strong>Garantia de Fábrica</strong> — sem custo para você. O atendimento é coberto pelo fabricante.
+      </div>
+      {% else %}
       {# Orçamento = soma dos itens acima (calculado no servidor); deslocamento à parte #}
       <table class="tabela" style="margin-top:12px">
         <tbody>
@@ -47,6 +53,7 @@
       <span class="badge badge-{% if os.orcamento_status == 'aprovado' %}verde{% elif os.orcamento_status == 'recusado' %}vermelho{% else %}ambar{% endif %}">
         {{ os.orcamento_status }}
       </span></p>
+      {% endif %}
 
       {% if os.orcamento_status == 'pendente' %}
       <form method="post" style="margin-top:16px">

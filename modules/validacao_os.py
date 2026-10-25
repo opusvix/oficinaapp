@@ -31,7 +31,7 @@ class OSIn(BaseModel):
     id_tecnico: str | None = None
     descricao_inicial: str = Field(min_length=3, max_length=2000)
     custo_deslocamento: str | None = Field(default="0")
-    status: str | None = Field(default="aberta", max_length=30)
+    status: str | None = Field(default="avaliacao", max_length=30)
 
     @field_validator("id_cliente", "id_equipamento", "id_tecnico")
     @classmethod
@@ -80,11 +80,12 @@ class OSIn(BaseModel):
     @field_validator("status")
     @classmethod
     def _status(cls, valor: str | None) -> str:
-        # OS nasce aberta ou em avaliação. Aprovada/entregue/recusada só pelo
-        # fluxo (link do cliente, execução, entrega): aceitar aqui deixava um
-        # POST forjado abrir OS já "entregue" (Padrao_Mass_Assignment).
-        iniciais = {"aberta", "avaliacao"}
-        v = (_opcional(valor) or "aberta").strip().lower()
+        # OS nasce em "Aguardando avaliação" (avaliacao) ou "Garantia de Fábrica".
+        # Aprovada/entregue/recusada só pelo fluxo (fabricante, link do cliente,
+        # execução, entrega): aceitar aqui deixava um POST forjado abrir OS já
+        # "entregue" (Padrao_Mass_Assignment).
+        iniciais = {"avaliacao", "garantia_fabrica"}
+        v = (_opcional(valor) or "avaliacao").strip().lower()
         if v not in iniciais:
             raise ValueError("Status inicial inválido.")
         return v
