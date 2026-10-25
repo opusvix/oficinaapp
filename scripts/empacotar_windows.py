@@ -107,73 +107,108 @@ def _copiar_app(destino: Path) -> None:
         shutil.copy2(RAIZ / "scripts" / nome, scripts_dir / nome)
 
 
+def _escreve(caminho: Path, linhas: list) -> None:
+    caminho.write_text("\r\n".join(linhas) + "\r\n", encoding="ascii")
+
+
 def _escrever_lancadores(destino: Path) -> None:
-    # Launcher: prepara .env (1ª vez), abre o navegador sozinho e sobe o servidor.
-    (destino / "OficinaApp.bat").write_text(
-        "@echo off\r\n"
-        "cd /d \"%~dp0\"\r\n"
-        "if not exist instance mkdir instance\r\n"
-        "python\\python.exe scripts\\preparar_env.py\r\n"
-        "set ABRIR_NAVEGADOR=1\r\n"
-        "echo.\r\n"
-        "echo  OficinaApp esta iniciando... o navegador abre sozinho em alguns segundos.\r\n"
-        "echo  Para FECHAR o programa, feche esta janela preta.\r\n"
-        "echo.\r\n"
-        "python\\python.exe app.py\r\n",
-        encoding="ascii",
-    )
+    # Launcher SEM janela preta: roda o servidor com pythonw.exe (sem console) e
+    # deixa o app abrir o navegador sozinho. O usuário fecha pelo atalho "Fechar".
+    _escreve(destino / "OficinaApp.vbs", [
+        'Set sh = CreateObject("WScript.Shell")',
+        'Set fso = CreateObject("Scripting.FileSystemObject")',
+        'pasta = fso.GetParentFolderName(WScript.ScriptFullName)',
+        'sh.CurrentDirectory = pasta',
+        r'If Not fso.FolderExists(pasta & "\instance") Then fso.CreateFolder(pasta & "\instance")',
+        r'pyw = """" & pasta & "\python\pythonw.exe"""',
+        r'sh.Run pyw & " scripts\preparar_env.py", 0, True',
+        'sh.Environment("PROCESS")("ABRIR_NAVEGADOR") = "1"',
+        'sh.Run pyw & " app.py", 0, False',
+        'WScript.Sleep 3500',
+        r'senhaTxt = pasta & "\instance\SENHA-INICIAL.txt"',
+        'If fso.FileExists(senhaTxt) Then',
+        '  If DateDiff("s", fso.GetFile(senhaTxt).DateLastModified, Now) < 90 Then',
+        '    sh.Run "notepad.exe """ & senhaTxt & """", 1, False',
+        '  End If',
+        'End If',
+    ])
 
-    # Instalar.bat: cria o atalho na Área de Trabalho apontando pro launcher.
-    # (Roda em qualquer pasta — o programa funciona de onde foi extraído.)
-    ps = ("$ws=New-Object -ComObject WScript.Shell;"
-          "$lnk=$ws.CreateShortcut([System.IO.Path]::Combine($ws.SpecialFolders('Desktop'),"
-          "'OficinaApp.lnk'));"
-          "$lnk.TargetPath=Join-Path $env:PASTA 'OficinaApp.bat';"
-          "$lnk.WorkingDirectory=$env:PASTA;"
-          "$lnk.IconLocation=Join-Path $env:PASTA 'static\\favicon.ico';"
-          "$lnk.Save()")
-    (destino / "Instalar.bat").write_text(
-        "@echo off\r\n"
-        "cd /d \"%~dp0\"\r\n"
-        "echo ============================================================\r\n"
-        "echo  OficinaApp - instalacao\r\n"
-        "echo ============================================================\r\n"
-        "echo.\r\n"
-        "set \"PASTA=%~dp0\"\r\n"
-        "if \"%PASTA:~-1%\"==\"\\\" set \"PASTA=%PASTA:~0,-1%\"\r\n"
-        f"powershell -NoProfile -ExecutionPolicy Bypass -Command \"{ps}\"\r\n"
-        "if errorlevel 1 goto erro\r\n"
-        "echo  Pronto! Foi criado o atalho \"OficinaApp\" na sua Area de Trabalho.\r\n"
-        "echo  De dois cliques nele sempre que quiser abrir o programa.\r\n"
-        "echo.\r\n"
-        "pause\r\n"
-        "exit /b 0\r\n"
-        ":erro\r\n"
-        "echo  Nao foi possivel criar o atalho. Voce ainda pode abrir pelo OficinaApp.bat.\r\n"
-        "echo.\r\n"
-        "pause\r\n",
-        encoding="ascii",
-    )
+    # Fechar: encerra quem estiver ouvindo na porta 5000 (o servidor do app).
+    _escreve(destino / "Fechar OficinaApp.bat", [
+        "@echo off",
+        'for /f "tokens=5" %%p in (\'netstat -ano ^| findstr "127.0.0.1:5000" ^| findstr LISTENING\') do taskkill /F /PID %%p >nul 2>&1',
+        "echo OficinaApp foi fechado.",
+        "timeout /t 2 >nul",
+    ])
 
-    (destino / "LEIA-ME.txt").write_text(
-        "OficinaApp - Gestao para oficinas e assistencias tecnicas\r\n"
-        "========================================================\r\n\r\n"
-        "COMO USAR (3 passos):\r\n\r\n"
-        "  1. Extraia esta pasta inteira para onde quiser (ex.: C:\\OficinaApp).\r\n"
-        "  2. De dois cliques em  Instalar.bat  -> cria o atalho na Area de Trabalho.\r\n"
-        "  3. Abra pelo atalho \"OficinaApp\". O navegador abre sozinho no sistema.\r\n\r\n"
-        "PRIMEIRO ACESSO:\r\n"
-        "  Na primeira vez, a janela preta mostra a SENHA INICIAL do administrador.\r\n"
-        "  Anote essa senha para entrar. O e-mail padrao e  admin@oficina.local\r\n\r\n"
-        "PARA FECHAR:\r\n"
-        "  Feche a janela preta (a do fundo). Para abrir de novo, use o atalho.\r\n\r\n"
-        "OBSERVACOES:\r\n"
-        "  - Nao precisa instalar Python nem nada: ja vai tudo dentro da pasta.\r\n"
-        "  - Seus dados ficam no seu computador, na subpasta  instance\\.\r\n"
-        "  - Se o Windows avisar que nao reconhece o programa, e por nao ser\r\n"
-        "    assinado digitalmente - pode confiar e mandar executar assim mesmo.\r\n",
-        encoding="ascii",
-    )
+    # Cria os atalhos (feito em VBS: lida com caminhos e espaços sem dor de cabeca).
+    _escreve(destino / "_atalhos.vbs", [
+        'Set sh = CreateObject("WScript.Shell")',
+        'Set fso = CreateObject("Scripting.FileSystemObject")',
+        'pasta = fso.GetParentFolderName(WScript.ScriptFullName)',
+        'desk = sh.SpecialFolders("Desktop")',
+        r'Set a = sh.CreateShortcut(desk & "\OficinaApp.lnk")',
+        r'a.TargetPath = sh.ExpandEnvironmentStrings("%windir%") & "\System32\wscript.exe"',
+        r'a.Arguments = """" & pasta & "\OficinaApp.vbs"""',
+        'a.WorkingDirectory = pasta',
+        r'a.IconLocation = pasta & "\static\favicon.ico"',
+        'a.Save',
+        r'Set b = sh.CreateShortcut(desk & "\Fechar OficinaApp.lnk")',
+        r'b.TargetPath = pasta & "\Fechar OficinaApp.bat"',
+        'b.WorkingDirectory = pasta',
+        r'b.IconLocation = pasta & "\static\favicon.ico"',
+        'b.Save',
+    ])
+
+    _escreve(destino / "Instalar.bat", [
+        "@echo off",
+        'cd /d "%~dp0"',
+        "echo ============================================================",
+        "echo  OficinaApp - instalacao",
+        "echo ============================================================",
+        "echo.",
+        'wscript "%~dp0_atalhos.vbs"',
+        "echo  Pronto! Na Area de Trabalho foram criados dois atalhos:",
+        'echo    - "OficinaApp"         (abre o programa)',
+        'echo    - "Fechar OficinaApp"  (encerra o programa)',
+        "echo.",
+        "echo  Para fixar na Barra de Tarefas: botao DIREITO no atalho OficinaApp,",
+        "echo  depois Mostrar mais opcoes e Fixar na barra de tarefas.",
+        "echo.",
+        "pause",
+    ])
+
+    _escreve(destino / "LEIA-ME.txt", [
+        "OficinaApp - Gestao para oficinas e assistencias tecnicas",
+        "========================================================",
+        "",
+        "COMO USAR:",
+        "",
+        "  1. Extraia esta pasta inteira para onde quiser (ex.: C:\\OficinaApp).",
+        "  2. De dois cliques em  Instalar.bat  (cria os atalhos na Area de Trabalho).",
+        '  3. Abra pelo atalho "OficinaApp". NAO aparece janela preta: o navegador',
+        "     abre sozinho em alguns segundos com o sistema.",
+        "",
+        "PRIMEIRO ACESSO:",
+        "  Na primeira vez, abre um bloco de notas com a SENHA INICIAL do",
+        "  administrador. Anote e use para entrar (e-mail padrao: admin@oficina.local).",
+        "  Troque a senha no primeiro acesso; depois pode apagar esse arquivo.",
+        "",
+        "PARA FECHAR:",
+        '  Use o atalho "Fechar OficinaApp" (ou reinicie o computador). Fechar a aba',
+        "  do navegador NAO encerra o programa, que roda por baixo sem janela.",
+        "",
+        "FIXAR NA BARRA DE TAREFAS (Windows 11):",
+        '  Botao DIREITO no atalho "OficinaApp" > Mostrar mais opcoes >',
+        "  Fixar na barra de tarefas. (Alternativa: no navegador, clique em",
+        '  "Instalar" para ter o OficinaApp como um app separado.)',
+        "",
+        "OBSERVACOES:",
+        "  - Nao precisa instalar Python nem nada: ja vai tudo dentro da pasta.",
+        "  - Seus dados ficam no seu computador, na subpasta  instance\\.",
+        "  - Se o Windows avisar que nao reconhece o programa, e por nao ser",
+        "    assinado digitalmente - pode confiar e mandar executar assim mesmo.",
+    ])
 
 
 def _zipar(destino: Path) -> Path:

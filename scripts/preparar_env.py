@@ -53,7 +53,7 @@ def preparar(perguntar=input) -> list[str]:
     if not _valor(texto, "ADMIN_EMAIL"):
         try:
             email = (perguntar(f"E-mail do administrador [{EMAIL_PADRAO}]: ") or "").strip()
-        except EOFError:          # rodando sem teclado (ex.: agendador): usa o padrão
+        except (EOFError, RuntimeError, OSError):   # sem teclado/console (pythonw, agendador): usa o padrão
             email = ""
         email = email or EMAIL_PADRAO
         if "@" not in email:

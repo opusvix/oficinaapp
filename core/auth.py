@@ -251,6 +251,19 @@ def bootstrap_admin() -> None:
         # Ajusta sequence se SQLite
         db.execute("UPDATE sqlite_sequence SET seq = MAX(seq, 1) WHERE name = 'usuario'")
         print(f"[BOOT] Admin inicial criado: {email}")
+        if not senha_env:
+            # O pacote Windows roda sem janela (pythonw): a senha sorteada não
+            # apareceria em console nenhum. Então fica neste arquivo pro 1º acesso.
+            try:
+                from flask import current_app
+                caminho = os.path.join(current_app.instance_path, "SENHA-INICIAL.txt")
+                with open(caminho, "w", encoding="utf-8") as f:
+                    f.write("OficinaApp - PRIMEIRO ACESSO\r\n\r\n"
+                            f"E-mail: {email}\r\nSenha:  {senha}\r\n\r\n"
+                            "Entre com esses dados e troque a senha no primeiro acesso.\r\n"
+                            "Depois de trocar a senha, pode apagar este arquivo.\r\n")
+            except OSError:
+                pass
 
     db.commit()
 
