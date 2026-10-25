@@ -230,9 +230,12 @@ def nova():
            WHERE u.D_E_L_E_T = 0 AND u.id_perfil = 2
            ORDER BY u.nome COLLATE NOCASE"""
     )
+    # Rótulo mostra o TIPO (modelo) na frente; o patrimônio vai pra linha de baixo,
+    # junto do cliente. O SelectBusca procura nos dois, então ainda acha por
+    # patrimônio, modelo ou cliente.
     eq_opcoes = [{"valor": e["id"],
-                  "rotulo": f'{e["patrimonio"]} · {e["modelo"] or "sem modelo"}',
-                  "sub": e["razao_social"]} for e in equipamentos]
+                  "rotulo": e["modelo"] or "Equipamento sem modelo",
+                  "sub": f'{e["patrimonio"]} · {e["razao_social"]}'} for e in equipamentos]
     tec_opcoes = [{"valor": t["id"], "rotulo": t["nome"]} for t in tecnicos]
 
     def tela(erros: dict, valores: dict, codigo: int = 200):

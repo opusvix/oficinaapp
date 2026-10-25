@@ -19,7 +19,7 @@ from flask import Flask, Response, render_template, send_from_directory
 from core.db import query_one
 
 COR_TEMA = "#F28333"        # laranja da marca ESG (tokens.css --accent): manifest exige cor literal
-VERSAO_SW = "oficina-v2"    # troque quando mudar a lista do cache do SW
+VERSAO_SW = "oficina-v3"    # troque quando mudar a lista do cache do SW
 
 
 def _nome_empresa() -> str:

@@ -100,6 +100,11 @@
                     <i class="ph ph-sign-out"></i>
                 </a>
             </div>
+            {% if not modo_demo %}
+            <a href="/auth/trocar-senha" class="link-trocar-senha">
+                <i class="ph ph-key"></i> Trocar minha senha
+            </a>
+            {% endif %}
         </div>
 
         <!-- Drag handle -->

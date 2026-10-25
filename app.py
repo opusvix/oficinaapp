@@ -211,4 +211,8 @@ if __name__ == "__main__":
     # Roda em 127.0.0.1:5000 (uso local pelo iniciar.bat). Debug (recarrega ao salvar e
     # mostra o console do Werkzeug, que executa código) só com FLASK_DEBUG=1 de propósito.
     # No servidor quem sobe o app é o gunicorn (Dockerfile), não este bloco.
-    app.run(host="127.0.0.1", port=5000, debug=os.getenv("FLASK_DEBUG") == "1")
+    # threaded=True: atende requisições em paralelo. Sem isso o servidor local é
+    # single-thread e, sob várias requisições ao mesmo tempo (o navegador + o
+    # service worker), uma conexão era recusada e o PWA caía na tela "Sem conexão"
+    # mesmo com tudo funcionando. (No servidor, o gunicorn já usa threads.)
+    app.run(host="127.0.0.1", port=5000, threaded=True, debug=os.getenv("FLASK_DEBUG") == "1")

@@ -50,6 +50,8 @@ def get_user_menu(user) -> list[dict]:
             continue
         rota = (ln["rota"] or "").rstrip("/")
         pronto = bool(rota) and not ln["em_breve"] and rota in rotas
+        if not pronto:
+            continue   # esconde do menu o módulo ainda não pronto ("Em breve")
         chave_grupo = ln["grupo"] or "Outros"
         if chave_grupo not in grupos:
             grupos[chave_grupo] = []

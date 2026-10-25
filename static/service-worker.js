@@ -9,7 +9,7 @@
    Estáticos: rede primeiro (deploy novo aparece na hora), cache se estiver sem rede.
    Telas: sempre rede; sem rede, mostra /offline. */
 
-var CACHE = "oficina-v2";            // = core/pwa.py VERSAO_SW
+var CACHE = "oficina-v3";            // = core/pwa.py VERSAO_SW
 var PRECACHE = [
   "/offline",
   "/static/css/tokens.css",
@@ -52,8 +52,14 @@ self.addEventListener("fetch", function (e) {
   if (url.origin !== self.location.origin) return;
 
   if (req.mode === "navigate") {
-    // Tela: rede sempre. Sem rede, a página offline (nunca uma tela antiga com dado)
-    e.respondWith(fetch(req).catch(function () { return caches.match("/offline"); }));
+    // Tela: rede sempre. Uma navegação pode falhar por UMA conexão recusada (servidor
+    // local sob várias requisições ao mesmo tempo); tenta DE NOVO antes de desistir.
+    // Só mostra /offline quando realmente não dá — nunca uma tela antiga com dado.
+    e.respondWith(
+      fetch(req).catch(function () {
+        return fetch(req).catch(function () { return caches.match("/offline"); });
+      })
+    );
     return;
   }
 

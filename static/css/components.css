@@ -746,3 +746,21 @@ table.tabela tfoot td { padding: 12px 14px; font-weight: 700; border-top: 2px so
     white-space: nowrap;
 }
 .demo-bar .btn:hover { background: var(--accent-hover); }
+
+/* ── Link "Trocar minha senha" (descoberta no rodapé do menu) ──────────────── */
+.link-trocar-senha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--texto-secundario);
+    text-decoration: none;
+}
+.link-trocar-senha:hover {
+    background: var(--accent-suave);
+    color: var(--accent-texto-escuro);
+}
